@@ -31,6 +31,7 @@ class DashboardCard(ctk.CTkFrame):
             fg_color="#181D26",
             border_color="#263238",
             border_width=2,
+            cursor="hand2",
             **kwargs
         )
         self.card_id = card_id
@@ -49,23 +50,24 @@ class DashboardCard(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         # Top Bar: Icon & Badge
-        top_row = ctk.CTkFrame(self, fg_color="transparent")
-        top_row.pack(fill="x", padx=20, pady=(20, 10))
+        self.top_row = ctk.CTkFrame(self, fg_color="transparent", cursor="hand2")
+        self.top_row.pack(fill="x", padx=20, pady=(20, 10))
 
-        icon_lbl = ctk.CTkLabel(
-            top_row, text=icon, font=ctk.CTkFont(size=36)
+        self.icon_lbl = ctk.CTkLabel(
+            self.top_row, text=icon, font=ctk.CTkFont(size=36), cursor="hand2"
         )
-        icon_lbl.pack(side="left")
+        self.icon_lbl.pack(side="left")
 
         self.badge_lbl = ctk.CTkLabel(
-            top_row,
+            self.top_row,
             text=badge_text,
             font=ctk.CTkFont(size=11, weight="bold"),
             fg_color="#101C26",
             text_color=self.accent_color,
             corner_radius=6,
             padx=10,
-            pady=4
+            pady=4,
+            cursor="hand2"
         )
         self.badge_lbl.pack(side="right")
 
@@ -75,7 +77,8 @@ class DashboardCard(ctk.CTkFrame):
             text=title,
             font=ctk.CTkFont(size=20, weight="bold"),
             text_color="#ECEFF1",
-            anchor="w"
+            anchor="w",
+            cursor="hand2"
         )
         self.title_lbl.pack(fill="x", padx=20, pady=(4, 6))
 
@@ -87,16 +90,17 @@ class DashboardCard(ctk.CTkFrame):
             text_color="#90A4AE",
             justify="left",
             wraplength=340,
-            anchor="w"
+            anchor="w",
+            cursor="hand2"
         )
         self.sub_lbl.pack(fill="both", expand=True, padx=20, pady=(0, 14))
 
         # Bottom Action Bar
-        bot_row = ctk.CTkFrame(self, fg_color="transparent")
-        bot_row.pack(fill="x", padx=20, pady=(0, 18))
+        self.bot_row = ctk.CTkFrame(self, fg_color="transparent", cursor="hand2")
+        self.bot_row.pack(fill="x", padx=20, pady=(0, 18))
 
         self.btn_open = ctk.CTkButton(
-            bot_row,
+            self.bot_row,
             text="Open Studio ➔",
             font=ctk.CTkFont(size=13, weight="bold"),
             fg_color="#212A36",
@@ -109,7 +113,11 @@ class DashboardCard(ctk.CTkFrame):
         self.btn_open.pack(fill="x")
 
     def _bind_hover(self):
-        widgets = [self, self.title_lbl, self.sub_lbl]
+        widgets = [
+            self, self.title_lbl, self.sub_lbl,
+            self.icon_lbl, self.badge_lbl,
+            self.top_row, self.bot_row
+        ]
         for w in widgets:
             w.bind("<Enter>", self._on_enter)
             w.bind("<Leave>", self._on_leave)
