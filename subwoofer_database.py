@@ -769,7 +769,7 @@ SUBWOOFER_DB: Dict[str, Dict[str, SubwooferModel]] = {
 
 def get_all_manufacturers() -> List[str]:
     """Return sorted list of all available subwoofer manufacturers."""
-    return sorted(list(SUBWOOFER_DB.keys()))
+    return sorted(list(SUBWOOFER_DB))
 
 
 def extract_series_name(model_name: str) -> str:
@@ -880,7 +880,7 @@ def get_series_for_manufacturer(maker: str) -> List[str]:
     if maker not in SUBWOOFER_DB:
         return []
     series_set = set()
-    for model_name in SUBWOOFER_DB[maker].keys():
+    for model_name in SUBWOOFER_DB[maker]:
         series_set.add(extract_series_name(model_name))
     return sorted(list(series_set))
 
@@ -890,7 +890,7 @@ def get_models_for_maker_and_series(maker: str, series: str) -> List[str]:
     if maker not in SUBWOOFER_DB:
         return []
     matched = []
-    for model_name in SUBWOOFER_DB[maker].keys():
+    for model_name in SUBWOOFER_DB[maker]:
         if series == "All Series" or extract_series_name(model_name) == series:
             matched.append(model_name)
     return sorted(matched)
@@ -899,7 +899,7 @@ def get_models_for_maker_and_series(maker: str, series: str) -> List[str]:
 def get_models_for_manufacturer(maker: str) -> List[str]:
     """Return list of models available for a specific maker."""
     if maker in SUBWOOFER_DB:
-        return list(SUBWOOFER_DB[maker].keys())
+        return list(SUBWOOFER_DB[maker])
     return []
 
 
