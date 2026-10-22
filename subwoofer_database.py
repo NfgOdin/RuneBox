@@ -879,10 +879,7 @@ def get_series_for_manufacturer(maker: str) -> List[str]:
     """Return sorted list of model lines/series for a given manufacturer."""
     if maker not in SUBWOOFER_DB:
         return []
-    series_set = set()
-    for model_name in SUBWOOFER_DB[maker].keys():
-        series_set.add(extract_series_name(model_name))
-    return sorted(list(series_set))
+    return sorted({extract_series_name(model_name) for model_name in SUBWOOFER_DB[maker]})
 
 
 def get_models_for_maker_and_series(maker: str, series: str) -> List[str]:
