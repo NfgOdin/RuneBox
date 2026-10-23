@@ -1091,15 +1091,29 @@ class RuneBoxApp(ctk.CTk):
         return entry
 
     def _get_float(self, entry: ctk.CTkEntry, fallback: float = 0.0) -> float:
+        val_str = entry.get().strip()
+        if not val_str:
+            entry.configure(border_color="#37474F")
+            return fallback
         try:
-            return float(entry.get().strip())
+            val = float(val_str)
+            entry.configure(border_color="#37474F")
+            return val
         except ValueError:
+            entry.configure(border_color="#FF1744")
             return fallback
 
     def _get_int(self, entry: ctk.CTkEntry, fallback: int = 1) -> int:
+        val_str = entry.get().strip()
+        if not val_str:
+            entry.configure(border_color="#37474F")
+            return fallback
         try:
-            return int(entry.get().strip())
+            val = int(val_str)
+            entry.configure(border_color="#37474F")
+            return val
         except ValueError:
+            entry.configure(border_color="#FF1744")
             return fallback
 
     def _on_slider_change(self, entry_widget: ctk.CTkEntry, slider_val: float):
