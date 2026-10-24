@@ -138,15 +138,13 @@ class RuneBoxApp(ctk.CTk):
         self.nav_left_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         self.nav_left_frame.pack(side="left", padx=12, pady=10)
 
-        self.btn_nav_home = ctk.CTkButton(
-            self.nav_left_frame, text="🏠 Home", width=74, height=32,
+        self.btn_nav_home = ctk.CTkButton(self.nav_left_frame, cursor="hand2", text="🏠 Home", width=74, height=32,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#1F2937", hover_color="#374151", text_color="#00E5FF",
             command=lambda: self.navigate_to("home")
         )
 
-        self.btn_nav_back = ctk.CTkButton(
-            self.nav_left_frame, text="⬅ Back", width=70, height=32,
+        self.btn_nav_back = ctk.CTkButton(self.nav_left_frame, cursor="hand2", text="⬅ Back", width=70, height=32,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#1F2937", hover_color="#374151", text_color="#ECEFF1",
             command=self.navigate_back
@@ -176,26 +174,22 @@ class RuneBoxApp(ctk.CTk):
         header_actions = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         header_actions.pack(side="right", padx=16, pady=10)
 
-        self.btn_save_proj = ctk.CTkButton(
-            header_actions, text="💾 Save", width=68, height=28,
+        self.btn_save_proj = ctk.CTkButton(header_actions, cursor="hand2", text="💾 Save", width=68, height=28,
             fg_color="#1E3A5F", hover_color="#2B4C7E", command=self._save_project
         )
         self.btn_save_proj.pack(side="left", padx=3)
 
-        self.btn_load_proj = ctk.CTkButton(
-            header_actions, text="📂 Load", width=68, height=28,
+        self.btn_load_proj = ctk.CTkButton(header_actions, cursor="hand2", text="📂 Load", width=68, height=28,
             fg_color="#1E3A5F", hover_color="#2B4C7E", command=self._load_project
         )
         self.btn_load_proj.pack(side="left", padx=3)
 
-        self.btn_toggle_units = ctk.CTkButton(
-            header_actions, text="Unit: Imperial", width=95, height=28,
+        self.btn_toggle_units = ctk.CTkButton(header_actions, cursor="hand2", text="Unit: Imperial", width=95, height=28,
             fg_color="#37474F", hover_color="#455A64", command=self._toggle_unit_system
         )
         self.btn_toggle_units.pack(side="left", padx=3)
 
-        self.btn_toggle_fraction = ctk.CTkButton(
-            header_actions, text="Tape: Decimals", width=105, height=28,
+        self.btn_toggle_fraction = ctk.CTkButton(header_actions, cursor="hand2", text="Tape: Decimals", width=105, height=28,
             fg_color="#263238", hover_color="#37474F", command=self._toggle_tape_fractions
         )
         self.btn_toggle_fraction.pack(side="left", padx=3)
@@ -268,8 +262,7 @@ class RuneBoxApp(ctk.CTk):
         bot_bar = ctk.CTkFrame(self.view_box_builder, height=44, fg_color="#11151C", corner_radius=8)
         bot_bar.pack(fill="x", padx=14, pady=(0, 10))
 
-        self.btn_step_prev = ctk.CTkButton(
-            bot_bar, text="⬅ Previous Step", width=130, height=30,
+        self.btn_step_prev = ctk.CTkButton(bot_bar, cursor="hand2", text="⬅ Previous Step", width=130, height=30,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#212A36", hover_color="#37474F", text_color="#ECEFF1",
             command=self._studio_prev_step
@@ -282,8 +275,7 @@ class RuneBoxApp(ctk.CTk):
         )
         self.lbl_step_indicator.pack(side="left", expand=True)
 
-        self.btn_step_next = ctk.CTkButton(
-            bot_bar, text="Next Step ➡", width=130, height=30,
+        self.btn_step_next = ctk.CTkButton(bot_bar, cursor="hand2", text="Next Step ➡", width=130, height=30,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color="#0091EA", hover_color="#00B0FF", text_color="#FFFFFF",
             command=self._studio_next_step
@@ -415,8 +407,7 @@ class RuneBoxApp(ctk.CTk):
         self.model_combo.set("(Select Series first)")
         self.model_combo.grid(row=1, column=2, padx=10, pady=(2, 6), sticky="w")
 
-        self.btn_browse_menu = ctk.CTkButton(
-            preset_frame, text="☰ Browse Full Tree", width=160,
+        self.btn_browse_menu = ctk.CTkButton(preset_frame, cursor="hand2", text="☰ Browse Full Tree", width=160,
             fg_color="#37474F", hover_color="#455A64", command=self._popup_hierarchical_menu
         )
         self.btn_browse_menu.grid(row=1, column=3, padx=12, pady=(2, 6), sticky="w")
@@ -428,8 +419,7 @@ class RuneBoxApp(ctk.CTk):
         )
         self.driver_desc_lbl.grid(row=2, column=0, columnspan=3, padx=16, pady=(4, 8), sticky="w")
 
-        self.btn_save_custom_sub = ctk.CTkButton(
-            preset_frame, text="💾 Save Custom Sub", width=160,
+        self.btn_save_custom_sub = ctk.CTkButton(preset_frame, cursor="hand2", text="💾 Save Custom Sub", width=160,
             fg_color="#00796B", hover_color="#00897B", command=self._on_save_custom_subwoofer_clicked
         )
         self.btn_save_custom_sub.grid(row=2, column=3, padx=12, pady=(4, 8), sticky="w")
@@ -647,8 +637,7 @@ class RuneBoxApp(ctk.CTk):
             font=ctk.CTkFont(size=12, weight="bold"), text_color="#80D8FF"
         ).pack(side="left", padx=16, pady=8)
 
-        self.btn_solve_depth = ctk.CTkButton(
-            solve_frame, text="Back-Solve Required Depth", fg_color="#0091EA", hover_color="#00B0FF",
+        self.btn_solve_depth = ctk.CTkButton(solve_frame, cursor="hand2", text="Back-Solve Required Depth", fg_color="#0091EA", hover_color="#00B0FF",
             command=self._on_back_solve_depth
         )
         self.btn_solve_depth.pack(side="right", padx=16, pady=8)
@@ -706,14 +695,13 @@ class RuneBoxApp(ctk.CTk):
         self.frame_3d_controls = ctk.CTkFrame(canvas_frame, fg_color="#12161E", height=30)
         
         # Camera angle presets
-        ctk.CTkButton(self.frame_3d_controls, text="Iso", width=36, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("iso")).pack(side="left", padx=2, pady=4)
-        ctk.CTkButton(self.frame_3d_controls, text="Front", width=42, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("front")).pack(side="left", padx=2, pady=4)
-        ctk.CTkButton(self.frame_3d_controls, text="Side", width=38, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("side")).pack(side="left", padx=2, pady=4)
-        ctk.CTkButton(self.frame_3d_controls, text="Top", width=36, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("top")).pack(side="left", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="Iso", width=36, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("iso")).pack(side="left", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="Front", width=42, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("front")).pack(side="left", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="Side", width=38, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("side")).pack(side="left", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="Top", width=36, height=22, font=ctk.CTkFont(size=10), fg_color="#263238", hover_color="#37474F", command=lambda: self.box_3d.set_view("top")).pack(side="left", padx=2, pady=4)
 
         # Shading mode toggle
-        self.btn_3d_render_mode = ctk.CTkButton(
-            self.frame_3d_controls, text="Solid MDF", width=72, height=22, font=ctk.CTkFont(size=10, weight="bold"),
+        self.btn_3d_render_mode = ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="Solid MDF", width=72, height=22, font=ctk.CTkFont(size=10, weight="bold"),
             fg_color="#00838F", hover_color="#0097A7", command=self._toggle_3d_shading
         )
         self.btn_3d_render_mode.pack(side="left", padx=6, pady=4)
@@ -728,8 +716,8 @@ class RuneBoxApp(ctk.CTk):
         self.slider_3d_explode.pack(side="left", padx=2, pady=4)
 
         # Zoom buttons
-        ctk.CTkButton(self.frame_3d_controls, text="🔍+", width=28, height=22, font=ctk.CTkFont(size=10), fg_color="#37474F", hover_color="#455A64", command=lambda: self.box_3d.adjust_zoom(1.15)).pack(side="right", padx=2, pady=4)
-        ctk.CTkButton(self.frame_3d_controls, text="🔍-", width=28, height=22, font=ctk.CTkFont(size=10), fg_color="#37474F", hover_color="#455A64", command=lambda: self.box_3d.adjust_zoom(0.85)).pack(side="right", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="🔍+", width=28, height=22, font=ctk.CTkFont(size=10), fg_color="#37474F", hover_color="#455A64", command=lambda: self.box_3d.adjust_zoom(1.15)).pack(side="right", padx=2, pady=4)
+        ctk.CTkButton(self.frame_3d_controls, cursor="hand2", text="🔍-", width=28, height=22, font=ctk.CTkFont(size=10), fg_color="#37474F", hover_color="#455A64", command=lambda: self.box_3d.adjust_zoom(0.85)).pack(side="right", padx=2, pady=4)
 
         # 2D Baffle Canvas
         self.baffle_canvas = tk.Canvas(
@@ -819,19 +807,19 @@ class RuneBoxApp(ctk.CTk):
 
         ctk.CTkLabel(action_bar, text="Table Saw & CNC Fabrication Cut List", font=ctk.CTkFont(size=15, weight="bold"), text_color="#00E5FF").pack(side="left", padx=14, pady=10)
 
-        self.btn_export_txt = ctk.CTkButton(action_bar, text="💾 Export TXT", width=95, fg_color="#00838F", hover_color="#0097A7", command=self._export_txt)
+        self.btn_export_txt = ctk.CTkButton(action_bar, cursor="hand2", text="💾 Export TXT", width=95, fg_color="#00838F", hover_color="#0097A7", command=self._export_txt)
         self.btn_export_txt.pack(side="right", padx=6, pady=10)
 
-        self.btn_export_csv = ctk.CTkButton(action_bar, text="📊 Export CSV", width=95, fg_color="#2E7D32", hover_color="#388E3C", command=self._export_csv)
+        self.btn_export_csv = ctk.CTkButton(action_bar, cursor="hand2", text="📊 Export CSV", width=95, fg_color="#2E7D32", hover_color="#388E3C", command=self._export_csv)
         self.btn_export_csv.pack(side="right", padx=6, pady=10)
 
-        self.btn_copy_summary = ctk.CTkButton(action_bar, text="📋 Copy Summary", width=110, fg_color="#37474F", hover_color="#455A64", command=self._copy_summary_to_clipboard)
+        self.btn_copy_summary = ctk.CTkButton(action_bar, cursor="hand2", text="📋 Copy Summary", width=110, fg_color="#37474F", hover_color="#455A64", command=self._copy_summary_to_clipboard)
         self.btn_copy_summary.pack(side="right", padx=6, pady=10)
 
-        self.btn_copy_cuts = ctk.CTkButton(action_bar, text="📋 Copy Cut List", width=110, fg_color="#37474F", hover_color="#455A64", command=self._copy_cuts_to_clipboard)
+        self.btn_copy_cuts = ctk.CTkButton(action_bar, cursor="hand2", text="📋 Copy Cut List", width=110, fg_color="#37474F", hover_color="#455A64", command=self._copy_cuts_to_clipboard)
         self.btn_copy_cuts.pack(side="right", padx=6, pady=10)
 
-        self.btn_print_shop = ctk.CTkButton(action_bar, text="🖨️ Shop Order View", width=120, fg_color="#5D4037", hover_color="#6D4C41", command=self._open_shop_work_order)
+        self.btn_print_shop = ctk.CTkButton(action_bar, cursor="hand2", text="🖨️ Shop Order View", width=120, fg_color="#5D4037", hover_color="#6D4C41", command=self._open_shop_work_order)
         self.btn_print_shop.pack(side="right", padx=6, pady=10)
 
         tree_frame = ctk.CTkFrame(container, fg_color="#181B20")
@@ -2740,8 +2728,7 @@ class RuneBoxApp(ctk.CTk):
         text_box.insert("1.0", work_order_str)
         text_box.pack(fill="both", expand=True, pady=(0, 8))
 
-        btn_copy = ctk.CTkButton(
-            txt_frame, text="📋 Copy Ticket to Clipboard", fg_color="#00838F",
+        btn_copy = ctk.CTkButton(txt_frame, cursor="hand2", text="📋 Copy Ticket to Clipboard", fg_color="#00838F",
             command=lambda: [self.clipboard_clear(), self.clipboard_append(work_order_str), messagebox.showinfo("Copied", "Work ticket copied!")]
         )
         btn_copy.pack(side="right")
@@ -2974,8 +2961,7 @@ class RuneBoxApp(ctk.CTk):
         bot_action_row = ctk.CTkFrame(container, fg_color="transparent")
         bot_action_row.pack(fill="x", pady=(16, 10))
 
-        self.btn_about = ctk.CTkButton(
-            bot_action_row,
+        self.btn_about = ctk.CTkButton(bot_action_row, cursor="hand2",
             text="ℹ️ About RuneBox & Creator",
             font=ctk.CTkFont(size=13, weight="bold"),
             fg_color="#1F2A38", hover_color="#00E5FF", text_color="#00E5FF",
@@ -3097,22 +3083,19 @@ class RuneBoxApp(ctk.CTk):
         actions = ctk.CTkFrame(card, fg_color="transparent")
         actions.pack(fill="x", padx=24, pady=(10, 16))
 
-        btn_git = ctk.CTkButton(
-            actions, text="🌐 GitHub Repo", width=120, height=32,
+        btn_git = ctk.CTkButton(actions, cursor="hand2", text="🌐 GitHub Repo", width=120, height=32,
             fg_color="#24292E", hover_color="#37474F", text_color="#ECEFF1",
             command=lambda: webbrowser.open("https://github.com/NfgOdin")
         )
         btn_git.pack(side="left", padx=(0, 6))
 
-        btn_feedback = ctk.CTkButton(
-            actions, text="✉️ Send Feedback", width=130, height=32,
+        btn_feedback = ctk.CTkButton(actions, cursor="hand2", text="✉️ Send Feedback", width=130, height=32,
             fg_color="#00838F", hover_color="#00ACC1", text_color="#FFFFFF",
             command=lambda: webbrowser.open("mailto:feedback@runebox.local?subject=RuneBox%20Feedback")
         )
         btn_feedback.pack(side="left", padx=4)
 
-        btn_close = ctk.CTkButton(
-            actions, text="Close", width=80, height=32,
+        btn_close = ctk.CTkButton(actions, cursor="hand2", text="Close", width=80, height=32,
             fg_color="#37474F", hover_color="#455A64", text_color="#ECEFF1",
             command=about_win.destroy
         )
