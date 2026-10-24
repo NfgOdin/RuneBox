@@ -845,7 +845,7 @@ class RuneBoxApp(ctk.CTk):
         ]
         for col_id, title, width in headings:
             self.tree.heading(col_id, text=title)
-            self.tree.column(col_id, width=width, anchor="center" if col_id in ["qty", "width", "height", "thick", "bevel"] else "w")
+            self.tree.column(col_id, width=width, anchor="center" if col_id in {"qty", "width", "height", "thick", "bevel"} else "w")
 
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
