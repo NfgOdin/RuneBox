@@ -63,6 +63,40 @@ class TSParameters:
     def effective_sd_sq_m(self) -> float:
         return self.effective_sd_sq_in * 0.00064516
 
+    @property
+    def derived_qts(self) -> float:
+        """
+        Auto-derives total Q (Qts) if it is missing or 0.0.
+        Acoustic Principle:
+        Total damping (Qts) is the parallel combination of electrical damping (Qes)
+        and mechanical damping (Qms). Formula: Qts = (Qes * Qms) / (Qes + Qms).
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qts > 0.0:
+            return self.qts
+        if self.qes > 0.0 and self.qms > 0.0:
+            return (self.qes * self.qms) / (self.qes + self.qms)
+        return 0.001
+
+    @property
+    def sensitivity(self) -> Dict[str, float]:
+        """
+        Derives reference efficiency (n0) and 1W/1m SPL sensitivity.
+        Physical Principle:
+        Reference efficiency determines the acoustic power radiated relative to electrical input.
+        n0 = (9.64 * 10^-10 * Fs^3 * Vas) / Qes.
+        SPL at 1W/1m is calculated via standard logarithmic conversion:
+        SPL_1W_1m = 112.2 + 10 * log10(n0).
+        """
+        qes_safe = max(self.qes, 0.001)
+        n0_pct = (9.64 * (10 ** -10) * (self.fs ** 3) * self.vas_liters) / qes_safe * 100.0
+        n0 = max(n0_pct / 100.0, 1e-12)
+        spl_1w_1m = 112.2 + 10.0 * math.log10(n0)
+        return {
+            'n0_pct': round(n0_pct, 4),
+            'spl_1w_1m_db': round(spl_1w_1m, 1)
+        }
+
 
 def calculate_ebp(fs: float, qes: float) -> Tuple[float, str, str]:
     if qes <= 0:
@@ -85,7 +119,7 @@ def solve_sealed_alignment(
     target_qtc: float = 0.707,
     polyfill_boost_pct: float = 0.0
 ) -> Dict[str, Any]:
-    ratio = target_qtc / ts.qts
+    ratio = target_qtc / ts.derived_qts
     if ratio <= 1.0:
         ratio = 1.001
 
@@ -115,9 +149,9 @@ def solve_sealed_alignment(
 
 def solve_ported_optimal_keele(ts: TSParameters) -> Dict[str, Any]:
     vas_cuft = ts.effective_vas_cuft
-    vb_cuft = 15.0 * vas_cuft * (ts.qts ** 2.87)
-    fb_hz = 0.42 * ts.fs * (ts.qts ** -0.9)
-    f3_hz = 0.26 * ts.fs * (ts.qts ** -1.4)
+    vb_cuft = 15.0 * vas_cuft * (ts.derived_qts ** 2.87)
+    fb_hz = 0.42 * ts.fs * (ts.derived_qts ** -0.9)
+    f3_hz = 0.26 * ts.fs * (ts.derived_qts ** -1.4)
 
     return {
         'recommended_vb_cuft': round(vb_cuft, 3),
@@ -132,19 +166,19 @@ def solve_4th_order_bandpass(
     s_factor: float = 0.707
 ) -> Dict[str, Any]:
     qtc_rear = 0.707
-    ratio = qtc_rear / ts.qts
+    ratio = qtc_rear / ts.derived_qts
     if ratio <= 1.0:
         ratio = 1.001
     alpha = (ratio ** 2) - 1.0
     vr_cuft = ts.effective_vas_cuft / alpha
 
-    vf_cuft = 2.0 * (s_factor ** 2) * (ts.qts ** 2) * ts.effective_vas_cuft
+    vf_cuft = 2.0 * (s_factor ** 2) * (ts.derived_qts ** 2) * ts.effective_vas_cuft
     fo = ts.fs * ratio
-    bw = (ts.fs / ts.qts) * s_factor
+    bw = (ts.fs / ts.derived_qts) * s_factor
     fl = max(10.0, fo - (bw * 0.5))
     fh = fo + (bw * 0.5)
 
-    gain_ratio = 2.0 * s_factor * (ts.qts / qtc_rear)
+    gain_ratio = 2.0 * s_factor * (ts.derived_qts / qtc_rear)
     gain_db = 20.0 * math.log10(max(gain_ratio, 0.01))
 
     return {
@@ -166,11 +200,11 @@ def solve_6th_order_bandpass_series_and_parallel(
     front_ratio_vas: float = 0.75
 ) -> Dict[str, Any]:
     vas_cuft = ts.effective_vas_cuft
-    vr_cuft = rear_ratio_vas * vas_cuft * (ts.qts ** 2.0)
-    vf_cuft = front_ratio_vas * vas_cuft * ts.qts
+    vr_cuft = rear_ratio_vas * vas_cuft * (ts.derived_qts ** 2.0)
+    vf_cuft = front_ratio_vas * vas_cuft * ts.derived_qts
 
-    fl_hz = 0.65 * ts.fs * (ts.qts ** -0.3)
-    fh_hz = 1.45 * ts.fs * (ts.qts ** -0.3)
+    fl_hz = 0.65 * ts.fs * (ts.derived_qts ** -0.3)
+    fh_hz = 1.45 * ts.fs * (ts.derived_qts ** -0.3)
 
     return {
         'rear_chamber_vb_cuft': round(max(0.1, vr_cuft), 3),
