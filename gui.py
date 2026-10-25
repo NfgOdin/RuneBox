@@ -28,7 +28,7 @@ def get_asset_path(relative_path: str) -> str:
     Get absolute path to resource, works for dev and for PyInstaller _MEIPASS.
     """
     try:
-        base_path = sys._MEIPASS
+        base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
@@ -2130,7 +2130,7 @@ class RuneBoxApp(ctk.CTk):
         sub_r = min(48.0, (sub_slot_w - 28) / 2.0)
         sub_y = ch / 2
 
-        speaker_terminals = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
+        speaker_terminals: List[Tuple[Tuple[float, float], Tuple[float, float], Optional[Tuple[float, float]], Optional[Tuple[float, float]]]] = []
 
         for i in range(n_subs):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
@@ -2182,15 +2182,15 @@ class RuneBoxApp(ctk.CTk):
         # -------------------------------------------------------------
         driver_entry_terms = []  # [(pos_pt, neg_pt), ...] for each sub
 
-        for i, terms in enumerate(speaker_terminals):
+        for i, spk_terms in enumerate(speaker_terminals):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
-            c1_pos, c1_neg, c2_pos, c2_neg = terms
+            c1_pos, c1_neg, c2_pos, c2_neg = spk_terms
             s_coils = cfg_list[i].get("coils", 2)
             s_intra = cfg_list[i].get("intra", intra)
 
             if s_coils == 1:
                 driver_entry_terms.append((c1_pos, c1_neg))
-            elif s_coils == 2 and s_intra == "parallel":
+            elif s_coils == 2 and s_intra == "parallel" and c2_pos is not None and c2_neg is not None:
                 # DVC PARALLEL:
                 # Coil 1 (+) to Coil 2 (+) runs horizontally across the upper cone face directly between (+) terminals
                 draw_wire([c1_pos[0], c1_pos[1], c2_pos[0], c2_pos[1]], fill_color="#FF1744", width=3)
@@ -2207,7 +2207,7 @@ class RuneBoxApp(ctk.CTk):
                 # In DVC parallel, both coils are tied: C1(+) is the left (+) feed and C2(-) is the right (-) tap
                 driver_entry_terms.append((c1_pos, c2_neg))
 
-            elif s_coils == 2 and s_intra == "series":
+            elif s_coils == 2 and s_intra == "series" and c2_pos is not None and c2_neg is not None:
                 # DVC SERIES:
                 # Coil 1 (-) jumpers to Coil 2 (+) across the voice-coil former / cone.
                 # Staying inside the driver face eliminates all collisions with bottom return rails or outer jumpers.
