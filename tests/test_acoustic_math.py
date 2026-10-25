@@ -5,16 +5,12 @@ class TestAcousticMath(unittest.TestCase):
 
     def test_calculate_ebp_error_handling(self):
         # Test qes = 0
-        ebp, badge, detail = calculate_ebp(fs=30.0, qes=0.0)
-        self.assertEqual(ebp, 0.0)
-        self.assertEqual(badge, 'Undefined')
-        self.assertEqual(detail, 'Qes must be greater than 0.')
+        result_zero = calculate_ebp(fs=30.0, qes=0.0)
+        self.assertEqual(result_zero, (0.0, 'Undefined', 'Qes must be greater than 0.'))
 
         # Test qes < 0
-        ebp, badge, detail = calculate_ebp(fs=30.0, qes=-1.0)
-        self.assertEqual(ebp, 0.0)
-        self.assertEqual(badge, 'Undefined')
-        self.assertEqual(detail, 'Qes must be greater than 0.')
+        result_negative = calculate_ebp(fs=30.0, qes=-1.0)
+        self.assertEqual(result_negative, (0.0, 'Undefined', 'Qes must be greater than 0.'))
 
     def test_calculate_ebp_sealed(self):
         # EBP <= 50
