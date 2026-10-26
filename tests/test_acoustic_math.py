@@ -5,7 +5,9 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    calculate_helmholtz_port_length,
+    calculate_helmholtz_tuning_frequency
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -86,6 +88,46 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(ebp, 100.0)
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
+
+    def test_helmholtz_tuning_frequency_back_solve(self):
+        """
+        Verify that calculating the port length and then back-solving
+        for the tuning frequency using that exact length returns the
+        original frequency.
+        """
+        target_fb = 32.0
+        vb = 2.0
+        area = 30.0
+
+        # 1. Forward calculation: solve for length
+        length = calculate_helmholtz_port_length(
+            vb_cuft=vb,
+            fb_hz=target_fb,
+            port_area_sq_in=area,
+            port_type='slot',
+            shared_walls=3
+        )
+
+        # 2. Reverse calculation: solve for Fb using the found length
+        fb_solved = calculate_helmholtz_tuning_frequency(
+            vb_cuft=vb,
+            port_area_sq_in=area,
+            port_physical_length_in=length,
+            port_type='slot',
+            shared_walls=3
+        )
+
+        self.assertAlmostEqual(fb_solved, target_fb, places=0)
+
+    def test_helmholtz_tuning_frequency_edge_cases(self):
+        """
+        Test that invalid inputs safely return 0.0 without throwing errors.
+        """
+        self.assertEqual(calculate_helmholtz_tuning_frequency(0, 30.0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_tuning_frequency(2.0, 0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_tuning_frequency(2.0, 30.0, 0), 0.0)
+        self.assertEqual(calculate_helmholtz_tuning_frequency(-1.0, 30.0, 20.0), 0.0)
+
 
 if __name__ == '__main__':
     unittest.main()

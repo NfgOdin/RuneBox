@@ -250,6 +250,64 @@ def calculate_helmholtz_port_length(
     return max(0.25, round(l_physical, 2))
 
 
+def calculate_helmholtz_tuning_frequency(
+    vb_cuft: float,
+    port_area_sq_in: float,
+    port_physical_length_in: float,
+    port_type: str = 'slot',
+    shared_walls: int = 3
+) -> float:
+    """
+    Calculates the Helmholtz resonance tuning frequency (Fb) given a physical port length.
+
+    Acoustic Principle:
+    A bass reflex enclosure is a Helmholtz resonator where the air mass inside the
+    port resonates against the compliance of the air volume inside the box.
+    The resonant frequency is given by Fb = (c / (2 * pi)) * sqrt(A / (L_effective * V)),
+    where L_effective is the physical length plus an acoustic end-correction factor.
+    The end-correction compensates for the boundary layer of air moving just outside
+    the physical port openings.
+
+    Args:
+        vb_cuft: Net internal volume of the enclosure (cubic feet).
+        port_area_sq_in: Cross-sectional area of the port (square inches).
+        port_physical_length_in: Physical length of the port (inches).
+        port_type: Style of port ('slot', 'round', 'aero', etc.).
+        shared_walls: Number of bounding enclosure walls the port shares (0-3).
+
+    Returns:
+        The calculated tuning frequency (Fb) in Hz. Returns 0.0 on invalid inputs.
+    """
+    if vb_cuft <= 0 or port_area_sq_in <= 0 or port_physical_length_in <= 0:
+        return 0.0
+
+    vb_cu_in = vb_cuft * 1728.0
+    c = SPEED_OF_SOUND_INCHES_PER_SEC
+    r_eff = math.sqrt(port_area_sq_in / math.pi)
+
+    p_type = port_type.lower()
+    if 'flare' in p_type or 'aero' in p_type:
+        k = 0.614
+    elif 'round' in p_type or 'pipe' in p_type or 'pvc' in p_type:
+        k = 0.732
+    else:
+        if shared_walls <= 0:
+            k = 0.732
+        elif shared_walls == 1:
+            k = 1.15
+        elif shared_walls == 2:
+            k = 1.45
+        else:
+            k = 2.227
+
+    l_acoustic = port_physical_length_in + (k * r_eff)
+    if l_acoustic <= 0:
+        return 0.0
+
+    fb_hz = (c / (2.0 * math.pi)) * math.sqrt(port_area_sq_in / (l_acoustic * vb_cu_in))
+    return round(fb_hz, 1)
+
+
 def calculate_port_air_velocity(
     p_rms: float,
     sd_sq_in: float,
