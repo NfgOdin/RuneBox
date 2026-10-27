@@ -5,7 +5,9 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    solve_quarter_wave_transmission_line,
+    SPEED_OF_SOUND_INCHES_PER_SEC
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -86,6 +88,37 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(ebp, 100.0)
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
+
+    def test_solve_quarter_wave_transmission_line(self):
+        # Base driver parameters
+        ts = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0, sd_sq_cm=510.0)
+
+        # Scenario 1: Default (Straight line, tuning at Fs)
+        result1 = solve_quarter_wave_transmission_line(ts)
+        expected_length = SPEED_OF_SOUND_INCHES_PER_SEC / (4.0 * 30.0) # 13504 / 120 = 112.533...
+        expected_sd_sq_in = 510.0 * 0.15500031 # ~79.05
+
+        self.assertEqual(result1['tuning_hz'], 30.0)
+        self.assertAlmostEqual(result1['line_length_in'], expected_length, places=2)
+        self.assertAlmostEqual(result1['start_area_sq_in'], expected_sd_sq_in, places=2)
+        self.assertAlmostEqual(result1['end_area_sq_in'], expected_sd_sq_in, places=2)
+        self.assertEqual(result1['taper_description'], "Straight (Constant Area)")
+
+        # Scenario 2: Tapered line (Contracting) with custom tuning frequency
+        result2 = solve_quarter_wave_transmission_line(ts, tuning_hz=28.0, taper_ratio=0.5)
+        expected_length_2 = SPEED_OF_SOUND_INCHES_PER_SEC / (4.0 * 28.0) # 13504 / 112 = 120.57...
+
+        self.assertEqual(result2['tuning_hz'], 28.0)
+        self.assertAlmostEqual(result2['line_length_in'], expected_length_2, places=2)
+        self.assertAlmostEqual(result2['start_area_sq_in'], expected_sd_sq_in, places=2)
+        self.assertAlmostEqual(result2['end_area_sq_in'], expected_sd_sq_in * 0.5, places=2)
+        self.assertEqual(result2['taper_description'], "Contracting (Tapered 0.5:1)")
+
+        # Scenario 3: Expanding line (Horn)
+        result3 = solve_quarter_wave_transmission_line(ts, tuning_hz=35.0, taper_ratio=2.0)
+        self.assertEqual(result3['tuning_hz'], 35.0)
+        self.assertAlmostEqual(result3['end_area_sq_in'], expected_sd_sq_in * 2.0, places=2)
+        self.assertEqual(result3['taper_description'], "Expanding (Horn 2.0:1)")
 
 if __name__ == '__main__':
     unittest.main()

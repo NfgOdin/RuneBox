@@ -194,6 +194,87 @@ def solve_4th_order_bandpass(
     }
 
 
+def solve_quarter_wave_transmission_line(
+    ts: TSParameters,
+    tuning_hz: Optional[float] = None,
+    taper_ratio: float = 1.0
+) -> Dict[str, Any]:
+    """
+    Calculates the acoustic parameters for a Quarter-Wave Transmission Line (T-Line) enclosure.
+
+    Acoustic Principle:
+    A transmission line couples the rear wave of the driver to a long acoustic duct.
+    The length of this duct is precisely 1/4 of the wavelength of the target tuning frequency (usually Fs).
+    At this tuning frequency, the acoustic wave traveling down the line shifts by 90 degrees (1/4 wave),
+    and when it exits the port, it combines in-phase with the front wave of the driver, creating
+    constructive interference and massively boosting low-frequency output.
+
+    The cross-sectional area of the line is typically equal to the effective piston area (Sd) of the driver
+    to maintain consistent acoustic impedance. Tapering the line (taper_ratio < 1.0) lowers the tuning
+    frequency for a given length and broadens the bandwidth, but reduces total output.
+
+    Formulas:
+    Line Length (inches) = Speed of Sound (in/sec) / (4 * Tuning Frequency (Hz))
+    Starting Area = Sd * taper_ratio (if taper_ratio > 1 for an expanding line, or 1.0 for straight)
+    Ending Area = Sd * (if taper_ratio < 1 for a contracting line, or 1.0 for straight)
+    Net Vb = Average Area * Length
+
+    Args:
+        ts: TSParameters object for the subwoofer.
+        tuning_hz: Target tuning frequency (defaults to the driver's Fs if None).
+        taper_ratio: Ratio of the start area to the end area.
+                     1.0 = Straight constant-area line (Standard).
+                     < 1.0 = Contracting/tapered line (e.g., 0.5 means end is half the size of start).
+                     > 1.0 = Expanding line / horn (e.g., 2.0 means end is twice the size of start).
+
+    Returns:
+        Dictionary containing calculated T-Line geometric parameters.
+    """
+    if tuning_hz is None or tuning_hz <= 0:
+        tuning_hz = ts.fs
+
+    sd_sq_in = ts.effective_sd_sq_in
+    if sd_sq_in <= 0:
+        # Fallback if Sd is completely zeroed out (unlikely with TSParameters defaulting, but safe)
+        dia = ts.nominal_dia_inch if ts.nominal_dia_inch else 12.0
+        r_eff = (dia * 0.5) * 0.82
+        sd_sq_in = math.pi * (r_eff ** 2)
+
+    # Standard 1/4 wave length calculation
+    line_length_in = SPEED_OF_SOUND_INCHES_PER_SEC / (4.0 * tuning_hz)
+
+    # Calculate cross-sectional areas based on taper
+    if taper_ratio == 1.0:
+        start_area_sq_in = sd_sq_in
+        end_area_sq_in = sd_sq_in
+        taper_desc = "Straight (Constant Area)"
+    elif taper_ratio < 1.0:
+        start_area_sq_in = sd_sq_in
+        end_area_sq_in = sd_sq_in * max(0.1, taper_ratio)
+        taper_desc = f"Contracting (Tapered {taper_ratio}:1)"
+    else: # > 1.0
+        start_area_sq_in = sd_sq_in
+        end_area_sq_in = sd_sq_in * taper_ratio
+        taper_desc = f"Expanding (Horn {taper_ratio}:1)"
+
+    avg_area_sq_in = (start_area_sq_in + end_area_sq_in) / 2.0
+
+    # Volume is Average Area * Length
+    net_vb_cu_in = avg_area_sq_in * line_length_in
+    net_vb_cuft = net_vb_cu_in / 1728.0
+
+    return {
+        'tuning_hz': round(tuning_hz, 1),
+        'line_length_in': round(line_length_in, 2),
+        'line_length_ft': round(line_length_in / 12.0, 2),
+        'start_area_sq_in': round(start_area_sq_in, 2),
+        'end_area_sq_in': round(end_area_sq_in, 2),
+        'net_vb_cuft': round(net_vb_cuft, 3),
+        'net_vb_liters': round(cuft_to_liters(net_vb_cuft), 2),
+        'taper_description': taper_desc
+    }
+
+
 def solve_6th_order_bandpass_series_and_parallel(
     ts: TSParameters,
     rear_ratio_vas: float = 0.5,
