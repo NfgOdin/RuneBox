@@ -8,9 +8,10 @@ import os
 import sys
 
 # Ensure local directory is on python path for frozen execution
-if getattr(sys, 'frozen', False):
-    application_path = sys._MEIPASS
-else:
+try:
+    application_path = sys._MEIPASS # type: ignore
+except AttributeError:
+
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 if application_path not in sys.path:

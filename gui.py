@@ -24,12 +24,13 @@ import webbrowser
 
 
 def get_asset_path(relative_path: str) -> str:
+
     """
     Get absolute path to resource, works for dev and for PyInstaller _MEIPASS.
     """
     try:
-        base_path = sys._MEIPASS
-    except Exception:
+        base_path = sys._MEIPASS # type: ignore
+    except AttributeError:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
@@ -129,7 +130,7 @@ class RuneBoxApp(ctk.CTk):
         self._build_layout()
         self.update_all_calculations()
 
-    def _build_layout(self):
+    def _build_layout(self) -> None:
         # Top Persistent Header Banner
         self.header_frame = ctk.CTkFrame(self, height=62, corner_radius=0, fg_color="#111318")
         self.header_frame.pack(side="top", fill="x")
@@ -1350,7 +1351,7 @@ class RuneBoxApp(ctk.CTk):
     # -------------------------------------------------------------
     # Master Calculation Loop
     # -------------------------------------------------------------
-    def update_all_calculations(self):
+    def update_all_calculations(self) -> None:
         self._updating_lock = True
         try:
             fs = self._get_float(self.entry_fs, 31.5)
@@ -2017,15 +2018,15 @@ class RuneBoxApp(ctk.CTk):
         # Build physical screw terminal blocks on the right edge of the amplifier
         # We will collect active connection points:
         # amp_ch1_pos, amp_ch1_neg, amp_ch2_pos, amp_ch2_neg, etc.
-        amp_term_blocks = {}  # key -> (term_x, term_y)
+        amp_term_blocks: Dict[str, Tuple[float, float]] = {}  # key -> (term_x, term_y)
 
         if "Monoblock" in topo:
             # Monoblock: SPK (+) and SPK (-)
-            terms = [
+            amp_terms = [
                 ("SPK +", "#D50000", True, amp_y1 + 80),
                 ("SPK -", "#212121", True, amp_y1 + 140)
             ]
-            for label, bg_col, is_active, t_y in terms:
+            for label, bg_col, is_active, t_y in amp_terms:
                 tx = amp_x2
                 c.create_rectangle(tx - 18, t_y - 12, tx, t_y + 12, fill=bg_col, outline="#FF5252" if "D5" in bg_col else "#90A4AE")
                 c.create_oval(tx - 13, t_y - 4, tx - 5, t_y + 4, fill="#B0BEC5", outline="#37474F")
@@ -2035,13 +2036,13 @@ class RuneBoxApp(ctk.CTk):
         elif "2-Channel" in topo:
             # 2-Channel: CH1 (+), CH1 (-), CH2 (+), CH2 (-)
             is_bridged = "Bridged" in topo
-            terms = [
+            amp_terms = [
                 ("CH1 +", "#D50000", True, amp_y1 + 60),
                 ("CH1 -", "#212121", not is_bridged, amp_y1 + 95),
                 ("CH2 +", "#D50000", not is_bridged, amp_y1 + 135),
                 ("CH2 -", "#212121", True, amp_y1 + 170)
             ]
-            for label, bg_col, is_active, t_y in terms:
+            for label, bg_col, is_active, t_y in amp_terms:
                 tx = amp_x2
                 border_col = "#FF5252" if "D5" in bg_col else "#90A4AE"
                 fill_col = bg_col if is_active else "#182026"
@@ -2103,7 +2104,7 @@ class RuneBoxApp(ctk.CTk):
 
         else:
             # 4-Channel Independent: CH1 (+/-), CH2 (+/-), CH3 (+/-), CH4 (+/-)
-            terms = [
+            amp_terms = [
                 ("CH1 +", "#D50000", True, amp_y1 + 50),
                 ("CH1 -", "#212121", True, amp_y1 + 75),
                 ("CH2 +", "#D50000", True, amp_y1 + 100),
@@ -2113,7 +2114,7 @@ class RuneBoxApp(ctk.CTk):
                 ("CH4 +", "#D50000", True, amp_y1 + 200),
                 ("CH4 -", "#212121", True, amp_y1 + 225)
             ]
-            for label, bg_col, is_active, t_y in terms:
+            for label, bg_col, is_active, t_y in amp_terms:
                 tx = amp_x2
                 border_col = "#FF5252" if "D5" in bg_col else "#90A4AE"
                 c.create_rectangle(tx - 16, t_y - 8, tx, t_y + 8, fill=bg_col, outline=border_col)
@@ -2130,7 +2131,7 @@ class RuneBoxApp(ctk.CTk):
         sub_r = min(48.0, (sub_slot_w - 28) / 2.0)
         sub_y = ch / 2
 
-        speaker_terminals = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
+        speaker_terminals: List[Tuple[Tuple[float, float], Tuple[float, float], Optional[Tuple[float, float]], Optional[Tuple[float, float]]]] = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
 
         for i in range(n_subs):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
@@ -2180,11 +2181,15 @@ class RuneBoxApp(ctk.CTk):
         # -------------------------------------------------------------
         # 3. INTRA-SPEAKER COIL WIRING (DVC Parallel or Series Jumpers)
         # -------------------------------------------------------------
-        driver_entry_terms = []  # [(pos_pt, neg_pt), ...] for each sub
+        driver_entry_terms: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []  # [(pos_pt, neg_pt), ...] for each sub
 
-        for i, terms in enumerate(speaker_terminals):
+        for i, spk_terms in enumerate(speaker_terminals):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
-            c1_pos, c1_neg, c2_pos, c2_neg = terms
+            _c1_pos, _c1_neg, _c2_pos, _c2_neg = spk_terms
+            c1_pos = (float(_c1_pos[0]), float(_c1_pos[1]))
+            c1_neg = (float(_c1_neg[0]), float(_c1_neg[1]))
+            c2_pos = (float(_c2_pos[0]), float(_c2_pos[1])) if _c2_pos is not None else (0.0, 0.0)
+            c2_neg = (float(_c2_neg[0]), float(_c2_neg[1])) if _c2_neg is not None else (0.0, 0.0)
             s_coils = cfg_list[i].get("coils", 2)
             s_intra = cfg_list[i].get("intra", intra)
 
@@ -2196,13 +2201,13 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([c1_pos[0], c1_pos[1], c2_pos[0], c2_pos[1]], fill_color="#FF1744", width=3)
                 draw_junction_dot(c1_pos[0], c1_pos[1], "#FF5252")
                 draw_junction_dot(c2_pos[0], c2_pos[1], "#FF5252")
-                c.create_text(sub_cx, c1_pos[1] - 8, text="COIL PARALLEL (+)", fill="#FF8A80", font=("Segoe UI", 7, "bold"))
+                c.create_text(sub_cx, c1_pos[1] - 8, text="COIL PARALLEL (+)", fill="#FF8A80", font=("Segoe UI", int(7), "bold"))
 
                 # Coil 1 (-) to Coil 2 (-) runs horizontally across the lower cone face directly between (-) terminals
                 draw_wire([c1_neg[0], c1_neg[1], c2_neg[0], c2_neg[1]], fill_color="#37474F", width=3)
                 draw_junction_dot(c1_neg[0], c1_neg[1], "#90A4AE")
                 draw_junction_dot(c2_neg[0], c2_neg[1], "#90A4AE")
-                c.create_text(sub_cx, c1_neg[1] + 8, text="COIL PARALLEL (-)", fill="#B0BEC5", font=("Segoe UI", 7, "bold"))
+                c.create_text(sub_cx, c1_neg[1] + 8, text="COIL PARALLEL (-)", fill="#B0BEC5", font=("Segoe UI", int(7), "bold"))
 
                 # In DVC parallel, both coils are tied: C1(+) is the left (+) feed and C2(-) is the right (-) tap
                 driver_entry_terms.append((c1_pos, c2_neg))
@@ -2231,6 +2236,7 @@ class RuneBoxApp(ctk.CTk):
         # (Strictly terminate at terminal posts — NO infinite lines!)
         # -------------------------------------------------------------
         # Determine source amplifier terminals based on topology
+        amp_pairs: List[Tuple[Tuple[float, float], Tuple[float, float], str]]
         if "Monoblock" in topo:
             src_pos = amp_term_blocks["SPK +"]
             src_neg = amp_term_blocks["SPK -"]
@@ -2299,14 +2305,14 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([a_pos[0], a_pos[1], a_pos[0] + 20, a_pos[1], a_pos[0] + 20, w_top_y, d_pos[0], w_top_y, d_pos[0], d_pos[1]], fill_color="#FF1744", width=3)
                 draw_junction_dot(a_pos[0], a_pos[1], "#FF1744")
                 draw_junction_dot(d_pos[0], d_pos[1], "#FF5252")
-                c.create_text((a_pos[0] + d_pos[0]) / 2, w_top_y - 8, text=f"{p_lbl} (+) DIRECT", fill="#FF5252", font=("Segoe UI", 7, "bold"))
+                c.create_text(int((a_pos[0] + d_pos[0]) / 2), w_top_y - 8, text=f"{p_lbl} (+) DIRECT", fill="#FF5252", font=("Segoe UI", 7, "bold"))
 
                 # Direct (-) wire from amp (-) to sub (-)
                 w_bot_y = ch - 26
                 draw_wire([a_neg[0], a_neg[1], a_neg[0] + 20, a_neg[1], a_neg[0] + 20, w_bot_y, d_neg[0], w_bot_y, d_neg[0], d_neg[1]], fill_color="#455A64", width=3)
                 draw_junction_dot(a_neg[0], a_neg[1], "#78909C")
                 draw_junction_dot(d_neg[0], d_neg[1], "#90A4AE")
-                c.create_text((a_neg[0] + d_neg[0]) / 2, w_bot_y + 8, text=f"{p_lbl} (-) RETURN", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
+                c.create_text(int((a_neg[0] + d_neg[0]) / 2), w_bot_y + 8, text=f"{p_lbl} (-) RETURN", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
 
             elif inter == "parallel":
                 # Parallel multi-sub:
@@ -2380,7 +2386,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x, s1_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x, s2_pos[1], "#FFAB40")
                 draw_junction_dot(s2_pos[0], s2_pos[1], "#FFAB40")
-                c.create_text(mid_x, (s1_neg[1] + s2_pos[1]) / 2.0 - 12, text="SERIES JUMPER (1→2)", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x, int((s1_neg[1] + s2_pos[1]) / 2.0) - 12, text="SERIES JUMPER (1→2)", fill="#FF9100", font=("Segoe UI", 7, "bold"))
 
             elif inter == "parallel_series" and n_subs == 3:
                 # -------------------------------------------------------------
@@ -2434,7 +2440,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(gap_23_x, bridge_bot_y, "#FFAB40")
                 draw_junction_dot(gap_23_x, s3_pos[1], "#FFAB40")
                 draw_junction_dot(s3_pos[0], s3_pos[1], "#FFAB40")
-                c.create_text(gap_23_x, (bridge_bot_y + s3_pos[1]) / 2.0, text="BANK 1→SUB 3\nSERIES BRIDGE", fill="#FF9100", font=("Segoe UI", 7, "bold"), justify="center")
+                c.create_text(gap_23_x, int((bridge_bot_y + s3_pos[1]) / 2.0), text="BANK 1→SUB 3\nSERIES BRIDGE", fill="#FF9100", font=("Segoe UI", 7, "bold"), justify="center")
 
             elif inter == "series_parallel" and n_subs == 4:
                 # -------------------------------------------------------------
@@ -2479,7 +2485,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x1, p1_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x1, p1_pos[1], "#FFAB40")
                 draw_junction_dot(p1_pos[0], p1_pos[1], "#FFAB40")
-                c.create_text(mid_x1, (p1_neg[1] + p1_pos[1]) / 2.0 - 12, text="PAIR 1 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x1, int((p1_neg[1] + p1_pos[1]) / 2.0) - 12, text="PAIR 1 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
 
                 # Series Jumper for Pair 2 (Sub 3 (-) -> Sub 4 (+))
                 # Routed strictly in the clearance gap between Sub 3 and Sub 4
@@ -2491,7 +2497,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x2, p2_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x2, p2_pos[1], "#FFAB40")
                 draw_junction_dot(p2_pos[0], p2_pos[1], "#FFAB40")
-                c.create_text(mid_x2, (p2_neg[1] + p2_pos[1]) / 2.0 - 12, text="PAIR 2 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x2, int((p2_neg[1] + p2_pos[1]) / 2.0) - 12, text="PAIR 2 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
 
             elif inter == "parallel_series" and n_subs == 4:
                 # -------------------------------------------------------------
@@ -2572,7 +2578,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([a_pos[0], a_pos[1], a_pos[0] + 20, a_pos[1], a_pos[0] + 20, w_top_y, s1_pos[0], w_top_y, s1_pos[0], s1_pos[1]], fill_color="#FF1744", width=3)
                 draw_junction_dot(a_pos[0], a_pos[1], "#FF1744")
                 draw_junction_dot(s1_pos[0], s1_pos[1], "#FF5252")
-                c.create_text((a_pos[0] + s1_pos[0]) / 2, w_top_y - 8, text=f"{p_lbl} (+) TO SUB 1", fill="#FF5252", font=("Segoe UI", 7, "bold"))
+                c.create_text(int((a_pos[0] + s1_pos[0]) / 2), w_top_y - 8, text=f"{p_lbl} (+) TO SUB 1", fill="#FF5252", font=("Segoe UI", 7, "bold"))
 
                 # Inter-speaker series jumpers:
                 # Each jumper routes strictly through the open clearance gap between Sub i and Sub i+1.
@@ -2592,7 +2598,7 @@ class RuneBoxApp(ctk.CTk):
                     draw_junction_dot(mid_x, cur_neg[1], "#FFAB40")
                     draw_junction_dot(mid_x, next_pos[1], "#FFAB40")
                     draw_junction_dot(next_pos[0], next_pos[1], "#FFAB40")
-                    c.create_text(mid_x, (cur_neg[1] + next_pos[1]) / 2.0 - 12, text=f"JUMPER {i+1}→{i+2}", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                    c.create_text(mid_x, int((cur_neg[1] + next_pos[1]) / 2.0) - 12, text=f"JUMPER {i+1}→{i+2}", fill="#FF9100", font=("Segoe UI", 7, "bold"))
 
                 # Final sub (-) returns to amp (-)
                 sn_neg = driver_entry_terms[-1][1]
@@ -2600,7 +2606,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([sn_neg[0], sn_neg[1], sn_neg[0], w_bot_y, a_neg[0] + 20, w_bot_y, a_neg[0] + 20, a_neg[1], a_neg[0], a_neg[1]], fill_color="#455A64", width=3)
                 draw_junction_dot(sn_neg[0], sn_neg[1], "#90A4AE")
                 draw_junction_dot(a_neg[0], a_neg[1], "#78909C")
-                c.create_text((a_neg[0] + sn_neg[0]) / 2, w_bot_y + 8, text=f"{p_lbl} (-) RETURN FROM LAST SUB", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
+                c.create_text(int((a_neg[0] + sn_neg[0]) / 2), w_bot_y + 8, text=f"{p_lbl} (-) RETURN FROM LAST SUB", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
 
     def _on_save_custom_subwoofer_clicked(self):
         # Dialog to prompt for Model Name
