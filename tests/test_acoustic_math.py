@@ -5,7 +5,9 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    calculate_helmholtz_port_length,
+    calculate_helmholtz_tuning_frequency
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -86,6 +88,49 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(ebp, 100.0)
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
+
+    def test_helmholtz_tuning_frequency_inverse(self):
+        # Base setup
+        vb_cuft = 2.0
+        fb_hz = 32.0
+        port_area_sq_in = 30.0
+
+        # Calculate length
+        length = calculate_helmholtz_port_length(
+            vb_cuft=vb_cuft,
+            fb_hz=fb_hz,
+            port_area_sq_in=port_area_sq_in,
+            port_type='slot',
+            shared_walls=3
+        )
+
+        # Now back-solve for fb
+        fb_calc = calculate_helmholtz_tuning_frequency(
+            vb_cuft=vb_cuft,
+            port_length_in=length,
+            port_area_sq_in=port_area_sq_in,
+            port_type='slot',
+            shared_walls=3
+        )
+
+        # The result should be very close to original fb (32.0)
+        # Floating point round trips may have small variance
+        self.assertAlmostEqual(fb_hz, fb_calc, delta=0.5)
+
+    def test_helmholtz_tuning_frequency_zero_values(self):
+        # Zeros or negative values should return 0.0
+        self.assertEqual(calculate_helmholtz_tuning_frequency(0.0, 10.0, 10.0), 0.0)
+        self.assertEqual(calculate_helmholtz_tuning_frequency(2.0, -5.0, 10.0), 0.0)
+        self.assertEqual(calculate_helmholtz_tuning_frequency(2.0, 10.0, 0.0), 0.0)
+
+    def test_helmholtz_tuning_frequency_different_ports(self):
+        # Using a flare port should give a slightly higher tuning due to lower k-factor
+        fb_slot = calculate_helmholtz_tuning_frequency(2.0, 20.0, 30.0, 'slot', 3)
+        fb_flare = calculate_helmholtz_tuning_frequency(2.0, 20.0, 30.0, 'flare')
+
+        # k = 0.614 for flare, k = 2.227 for slot with 3 shared walls
+        # Flare has shorter acoustic length, hence higher tuning freq.
+        self.assertTrue(fb_flare > fb_slot)
 
 if __name__ == '__main__':
     unittest.main()
