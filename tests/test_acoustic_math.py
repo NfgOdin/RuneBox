@@ -87,5 +87,131 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
 
+    def test_ts_parameters_isobaric_and_fallback_sd(self):
+        """
+        Physical Principle:
+        Isobaric loading halves the required compliance volume (Vas) as two drivers act as a single unit with double the mass and motor force,
+        sharing the same internal air spring. When Sd is not explicitly known, we approximate it from the nominal diameter minus surround width.
+        """
+        import math
+        # Isobaric config with 2 drivers
+        ts_iso = TSParameters(fs=30.0, qts=0.5, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0,
+                              is_isobaric=True, num_drivers=2, sd_sq_cm=None, nominal_dia_inch=10.0)
+        # vas = 50 * 0.5 (isobaric) * 2 = 50.0
+        self.assertEqual(ts_iso.effective_vas_liters, 50.0)
+        self.assertAlmostEqual(ts_iso.effective_vas_cuft, 50.0 / 28.3168466, places=5)
+
+        # fallback sd: dia=10.0 => r_eff = 5.0 * 0.82 = 4.1. sd = math.pi * 4.1^2 = 52.81017...
+        # multiplier = 1 (isobaric) => sd = 52.81017...
+        expected_sd_in = math.pi * (4.1 ** 2)
+        self.assertAlmostEqual(ts_iso.effective_sd_sq_in, expected_sd_in, places=5)
+        self.assertAlmostEqual(ts_iso.effective_sd_sq_m, expected_sd_in * 0.00064516, places=5)
+
+    def test_solver_ratio_clipping(self):
+        """
+        Physical Principle:
+        Enclosures act as a high-pass filter. A driver's Qtc in an enclosure must physically be greater than its free-air Qts.
+        If a target Qtc is requested that is equal to or lower than the driver's Qts, an infinite or negative volume would be required.
+        The solver intercepts this and clips the alignment ratio to a minimal functional boundary (1.001) to compute a massively infinite baffle equivalent.
+        """
+        # target_qtc = 0.707. Qts = 0.8 => ratio < 1.0 => ratio clipped to 1.001
+        ts_high_qts = TSParameters(fs=30.0, qts=0.8, qes=0.9, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+
+        sealed = solve_sealed_alignment(ts_high_qts, target_qtc=0.707)
+        # alpha = 1.001^2 - 1 = 0.002001. vas_cuft = 1.7657
+        # vb_cuft = 1.7657 / 0.002001 = 882.4...
+        self.assertGreater(sealed['net_vb_cuft'], 800.0)
+        self.assertAlmostEqual(sealed['alpha'], 0.002, places=3)
+
+        bp4 = solve_4th_order_bandpass(ts_high_qts, s_factor=0.707)
+        self.assertGreater(bp4['rear_sealed_vb_cuft'], 800.0)
+
+    def test_calculate_helmholtz_port_length_edges(self):
+        """
+        Physical Principle:
+        Helmholtz resonance length is inversely proportional to enclosure volume and the square of tuning frequency, and directly proportional to port area.
+        Physical length subtracts an end correction factor (k * effective_radius) derived from port termination topology (flanged vs free-air) to account for acoustic mass extending past the physical boundaries.
+        """
+        from acoustic_math import calculate_helmholtz_port_length
+        import math
+        # Invalid inputs return 0.0
+        self.assertEqual(calculate_helmholtz_port_length(0.0, 35.0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_port_length(2.0, -10.0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_port_length(2.0, 35.0, 0.0), 0.0)
+
+        # Valid calculations for different port types
+        vb, fb, ap = 2.0, 35.0, 20.0
+        # acoustic length internally:
+        # vb_in3 = 2.0 * 1728 = 3456
+        # L_ac = (13504^2 * 20) / (4 * math.pi^2 * 35^2 * 3456) = 3647160320 / 167098495.2 = 21.826...
+        # r_eff = math.sqrt(20 / math.pi) = 2.523...
+
+        # Slot 3 walls: k = 2.227, end_corr = 5.619 -> ~16.21
+        l_slot3 = calculate_helmholtz_port_length(vb, fb, ap, 'slot', 3)
+        self.assertAlmostEqual(l_slot3, 16.21, places=1)
+
+        # Slot 2 walls: k = 1.45, end_corr = 3.658 -> ~18.17
+        l_slot2 = calculate_helmholtz_port_length(vb, fb, ap, 'slot', 2)
+        self.assertAlmostEqual(l_slot2, 18.17, places=1)
+
+        # Slot 1 wall: k = 1.15, end_corr = 2.901 -> ~18.92
+        l_slot1 = calculate_helmholtz_port_length(vb, fb, ap, 'slot', 1)
+        self.assertAlmostEqual(l_slot1, 18.92, places=1)
+
+        # Slot 0 walls: k = 0.732, end_corr = 1.846 -> ~19.98
+        l_slot0 = calculate_helmholtz_port_length(vb, fb, ap, 'slot', 0)
+        self.assertAlmostEqual(l_slot0, 19.98, places=1)
+
+        # Aero / flare: k = 0.614, end_corr = 1.549 -> ~20.28
+        l_aero = calculate_helmholtz_port_length(vb, fb, ap, 'aero')
+        self.assertAlmostEqual(l_aero, 20.28, places=1)
+
+        # Round / pipe: k = 0.732, end_corr = 1.846 -> ~19.98
+        l_round = calculate_helmholtz_port_length(vb, fb, ap, 'round')
+        self.assertAlmostEqual(l_round, 19.98, places=1)
+
+    def test_calculate_port_air_velocity_states(self):
+        """
+        Physical Principle:
+        Port air velocity is the maximum particle speed at resonance, proportional to driver displacement (Sd * Xmax) and frequency, and inversely proportional to port area.
+        Excessive velocity (>17 m/s) induces non-linear turbulent airflow, leading to audible 'chuffing' and acoustic compression.
+        """
+        from acoustic_math import calculate_port_air_velocity
+
+        # Invalid inputs
+        inv = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=0.0, xmax_mm=10.0, fb_hz=30.0, port_area_sq_in=10.0)
+        self.assertEqual(inv['velocity_mps'], 0.0)
+        self.assertEqual(inv['status'], 'Invalid Inputs')
+
+        # Laminar < 17.0
+        # large port, small excursion
+        lam = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=75.0, xmax_mm=5.0, fb_hz=30.0, port_area_sq_in=30.0)
+        self.assertLess(lam['velocity_mps'], 17.0)
+        self.assertIn('LAMINAR', lam['status'])
+
+        # Moderate 17.0 - 25.0
+        mod = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=75.0, xmax_mm=15.0, fb_hz=30.0, port_area_sq_in=15.0)
+        self.assertGreaterEqual(mod['velocity_mps'], 17.0)
+        self.assertLessEqual(mod['velocity_mps'], 25.0)
+        self.assertIn('MODERATE', mod['status'])
+
+        # Chuffing > 25.0
+        chf = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=75.0, xmax_mm=25.0, fb_hz=30.0, port_area_sq_in=10.0)
+        self.assertGreater(chf['velocity_mps'], 25.0)
+        self.assertIn('CHUFFING', chf['status'])
+        self.assertTrue(chf['is_warning'])
+
+
+    def test_ts_parameters_sd_provided(self):
+        """
+        Physical Principle:
+        When effective piston area (Sd) is provided directly in square cm, it should convert to square inches using the standard 0.15500031 factor, overriding the fallback nominal diameter calculation.
+        """
+        ts_sd = TSParameters(fs=30.0, qts=0.5, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0,
+                              sd_sq_cm=500.0)
+        expected_sd_in = 500.0 * 0.15500031
+        self.assertEqual(ts_sd.effective_sd_sq_in, expected_sd_in)
+
+
 if __name__ == '__main__':
     unittest.main()
