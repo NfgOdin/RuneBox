@@ -28,7 +28,9 @@ def get_asset_path(relative_path: str) -> str:
     Get absolute path to resource, works for dev and for PyInstaller _MEIPASS.
     """
     try:
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS  # type: ignore
+    except AttributeError:
+        base_path = os.path.abspath(".")
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
@@ -2130,7 +2132,7 @@ class RuneBoxApp(ctk.CTk):
         sub_r = min(48.0, (sub_slot_w - 28) / 2.0)
         sub_y = ch / 2
 
-        speaker_terminals = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
+        speaker_terminals: List[Any] = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
 
         for i in range(n_subs):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
@@ -2182,9 +2184,9 @@ class RuneBoxApp(ctk.CTk):
         # -------------------------------------------------------------
         driver_entry_terms = []  # [(pos_pt, neg_pt), ...] for each sub
 
-        for i, terms in enumerate(speaker_terminals):
+        for i, spk_terms in enumerate(speaker_terminals):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
-            c1_pos, c1_neg, c2_pos, c2_neg = terms
+            c1_pos, c1_neg, c2_pos, c2_neg = spk_terms
             s_coils = cfg_list[i].get("coils", 2)
             s_intra = cfg_list[i].get("intra", intra)
 
