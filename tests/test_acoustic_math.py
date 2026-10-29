@@ -5,7 +5,8 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    solve_quarter_wave_t_line
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -86,6 +87,31 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(ebp, 100.0)
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
+
+    def test_solve_quarter_wave_t_line(self):
+        # Test with Fs = 30 Hz
+        ts = TSParameters(
+            fs=30.0, qts=0.4, qes=0.5, qms=4.0,
+            vas_liters=50.0, xmax_mm=10.0, p_rms=500.0,
+            sd_sq_cm=500.0
+        )
+
+        # Quarter wave length = 13504 / (4 * 30) = 112.53 inches
+        # Sd = 500 cm^2 = 77.5 sq inches
+        # Internal vol = (112.533 * 77.5) / 1728 = 5.048 cuft
+
+        res = solve_quarter_wave_t_line(ts)
+        self.assertEqual(res['tuning_hz'], 30.0)
+        self.assertAlmostEqual(res['line_length_in'], 112.53, places=1)
+        self.assertAlmostEqual(res['line_area_sq_in'], 77.5, places=1)
+        self.assertAlmostEqual(res['internal_volume_cuft'], 5.048, places=2)
+
+        # Test with custom tuning = 40 Hz
+        # Quarter wave length = 13504 / (4 * 40) = 84.4 inches
+        res_custom = solve_quarter_wave_t_line(ts, tuning_hz=40.0)
+        self.assertEqual(res_custom['tuning_hz'], 40.0)
+        self.assertAlmostEqual(res_custom['line_length_in'], 84.4, places=1)
+
 
 if __name__ == '__main__':
     unittest.main()

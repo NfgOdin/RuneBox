@@ -216,6 +216,47 @@ def solve_6th_order_bandpass_series_and_parallel(
     }
 
 
+def solve_quarter_wave_t_line(
+    ts: TSParameters,
+    tuning_hz: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Solves for a classic Quarter-Wave Transmission Line (T-Line) enclosure.
+
+    Acoustic Principle:
+    A transmission line uses a folded waveguide/labyrinth behind the driver. The line length
+    is set to exactly 1/4 of the wavelength of the target tuning frequency (often driver Fs).
+    At this frequency, the backwave traveling through the port shifts phase by 90 degrees
+    due to length, and another 90 degrees inherently from the driver's rear emission,
+    totaling 180 degrees. This flips the backwave to be perfectly in-phase with the
+    front wave at the line's terminus (mouth), creating massive acoustic summation.
+
+    The constant cross-sectional area of the line is typically equal to the
+    driver's effective radiating area (Sd) to maintain uniform acoustic impedance.
+
+    Length = c / (4 * f)
+    """
+    f = tuning_hz if tuning_hz and tuning_hz > 0 else ts.fs
+
+    # Speed of sound is 13504 inches per second. Quarter wave = 13504 / (4 * f) = 3376 / f
+    line_length_in = SPEED_OF_SOUND_INCHES_PER_SEC / (4.0 * f)
+
+    # Standard T-Line cross section matches the effective Sd of the drivers
+    line_area_sq_in = ts.effective_sd_sq_in
+
+    # Internal gross volume (excluding port walls/driver displacement, just the air column)
+    line_vol_cu_in = line_length_in * line_area_sq_in
+    line_vol_cuft = line_vol_cu_in / 1728.0
+
+    return {
+        'tuning_hz': round(f, 1),
+        'line_length_in': round(line_length_in, 2),
+        'line_area_sq_in': round(line_area_sq_in, 2),
+        'internal_volume_cuft': round(line_vol_cuft, 3),
+        'internal_volume_liters': round(cuft_to_liters(line_vol_cuft), 2)
+    }
+
+
 def calculate_helmholtz_port_length(
     vb_cuft: float,
     fb_hz: float,
