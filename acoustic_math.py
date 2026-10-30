@@ -79,6 +79,89 @@ class TSParameters:
         return 0.001
 
     @property
+    def derived_qes(self) -> float:
+        """
+        Auto-derives electrical Q (Qes) if it is missing or 0.0.
+        Acoustic Principle:
+        Qes can be mathematically isolated from Qts and Qms.
+        Formula: Qes = (Qts * Qms) / (Qms - Qts).
+        Requires Qms to be strictly greater than Qts to prevent negative damping.
+        """
+        if self.qes > 0.0:
+            return self.qes
+        if self.qts > 0.0 and self.qms > 0.0 and self.qms > self.qts:
+            return (self.qts * self.qms) / (self.qms - self.qts)
+        return 0.001
+
+    @property
+    def derived_qms(self) -> float:
+        """
+        Auto-derives mechanical Q (Qms) if it is missing or 0.0.
+        Acoustic Principle:
+        Qms can be mathematically isolated from Qts and Qes.
+        Formula: Qms = (Qts * Qes) / (Qes - Qts).
+        Requires Qes to be strictly greater than Qts.
+        """
+        if self.qms > 0.0:
+            return self.qms
+        if self.qts > 0.0 and self.qes > 0.0 and self.qes > self.qts:
+            return (self.qts * self.qes) / (self.qes - self.qts)
+        return 0.001
+
+    @property
+    def ebp(self) -> float:
+        """
+        Auto-derives Efficiency Bandwidth Product (EBP).
+        Acoustic Principle:
+        EBP is an objective indicator of motor force suitability for sealed vs ported alignments.
+        Formula: EBP = Fs / Qes.
+        """
+        return self.fs / max(self.derived_qes, 0.001)
+
+    @property
+    def cms_m_per_n(self) -> float:
+        """
+        Auto-derives suspension mechanical compliance (Cms) in Meters per Newton (m/N).
+        Physical Principle:
+        Compliance dictates how 'soft' or 'stiff' the spider and surround are.
+        It is derived from the acoustic compliance volume (Vas) and piston area (Sd).
+        Formula: Cms = Vas_m3 / (rho * c^2 * Sd_m2^2)
+        """
+        vas_m3 = self.effective_vas_liters / 1000.0
+        sd_m2 = self.effective_sd_sq_m
+        if sd_m2 <= 0.0:
+            return 0.0001
+
+        # rho * c^2
+        air_density = AIR_DENSITY_KG_M3
+        speed_sound = SPEED_OF_SOUND_MPS
+        restoring_force_factor = air_density * (speed_sound ** 2) * (sd_m2 ** 2)
+
+        if restoring_force_factor <= 0.0:
+            return 0.0001
+
+        return vas_m3 / restoring_force_factor
+
+    @property
+    def mms_kg(self) -> float:
+        """
+        Auto-derives moving mass (Mms) in Kilograms (kg).
+        Physical Principle:
+        The resonant frequency (Fs) of a driver is dictated by the interaction between
+        the suspension compliance (Cms) and the moving mass (Mms) of the cone assembly.
+        Formula: Mms = 1 / ((2 * pi * Fs)^2 * Cms)
+        """
+        if self.fs <= 0.0:
+            return 0.1
+
+        cms = self.cms_m_per_n
+        if cms <= 0.0:
+            return 0.1
+
+        omega_sq = (2.0 * math.pi * self.fs) ** 2
+        return 1.0 / (omega_sq * cms)
+
+    @property
     def sensitivity(self) -> Dict[str, float]:
         """
         Derives reference efficiency (n0) and 1W/1m SPL sensitivity.

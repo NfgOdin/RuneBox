@@ -24,6 +24,70 @@ class TestAcousticMath(unittest.TestCase):
         ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
         self.assertEqual(ts3.derived_qts, 0.001)
 
+    def test_derived_qes(self):
+        # Qes is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qes, 0.5)
+
+        # Qes is 0.0, but Qts and Qms are given
+        # Qes = (0.4 * 4.0) / (4.0 - 0.4) = 1.6 / 3.6 = 0.4444...
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qes, 0.4444, places=3)
+
+        # Qes is 0.0, and Qms <= Qts (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=0.3, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qes, 0.001)
+
+    def test_derived_qms(self):
+        # Qms is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qms, 4.0)
+
+        # Qms is 0.0, but Qts and Qes are given
+        # Qms = (0.4 * 0.5) / (0.5 - 0.4) = 0.2 / 0.1 = 2.0
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qms, 2.0, places=3)
+
+        # Qms is 0.0, and Qes <= Qts (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.4, qes=0.3, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qms, 0.001)
+
+    def test_ebp_property(self):
+        # ebp = Fs / Qes = 30.0 / 0.5 = 60.0
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.ebp, 60.0)
+
+        # ebp with derived Qes = 30.0 / 0.4444... = 67.5
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.ebp, 67.5, places=1)
+
+    def test_cms_and_mms(self):
+        # Reference driver: Fs=33.7, Vas=33.4L, Qes=0.49, Qms=4.7
+        # We also need Sd to compute Cms and Mms.
+        # Typically a 12-inch sub has Sd around 480 sq cm (approx 0.048 sq m).
+        ts = TSParameters(
+            fs=33.7,
+            qts=0.44,
+            qes=0.49,
+            qms=4.7,
+            vas_liters=33.4,
+            xmax_mm=19.0,
+            p_rms=750.0,
+            sd_sq_cm=480.0
+        )
+
+        cms = ts.cms_m_per_n
+        mms = ts.mms_kg
+
+        # Vas = 33.4 L = 0.0334 m^3
+        # Sd = 480 cm^2 = 0.048 m^2
+        # rho = 1.2041, c = 343
+        # Restoring force = 1.2041 * 343^2 * 0.048^2 = 1.2041 * 117649 * 0.002304 = 326.39
+        # Cms = 0.0334 / 326.39 = 0.0001023 m/N
+        # Mms = 1 / ((2 * pi * 33.7)^2 * 0.0001023) = 1 / (44820 * 0.0001023) = 1 / 4.586 = 0.218 kg (approx)
+        self.assertAlmostEqual(cms, 0.0001023, places=6)
+        self.assertTrue(0.15 < mms < 0.3)
+
     def test_sensitivity(self):
         # Based on standard 12-inch sub specs
         ts = TSParameters(fs=33.7, qts=0.44, qes=0.49, qms=4.7, vas_liters=33.4, xmax_mm=19.0, p_rms=750.0)
