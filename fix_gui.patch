@@ -1,0 +1,11 @@
+--- gui.py
++++ gui.py
+@@ -2130,7 +2130,7 @@
+         sub_r = min(48.0, (sub_slot_w - 28) / 2.0)
+         sub_y = ch / 2
+
+-        speaker_terminals = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
++        speaker_terminals: list[tuple[tuple[float, float], tuple[float, float], tuple[float, float] | None, tuple[float, float] | None]] = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
+
+         for i in range(n_subs):
+             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
