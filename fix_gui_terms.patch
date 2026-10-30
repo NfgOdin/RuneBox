@@ -1,0 +1,13 @@
+--- gui.py
++++ gui.py
+@@ -2182,9 +2182,9 @@
+         # -------------------------------------------------------------
+         driver_entry_terms = []  # [(pos_pt, neg_pt), ...] for each sub
+
+-        for i, terms in enumerate(speaker_terminals):
++        for i, term_tup in enumerate(speaker_terminals):
+             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
+-            c1_pos, c1_neg, c2_pos, c2_neg = terms
++            c1_pos, c1_neg, c2_pos, c2_neg = term_tup
+             s_coils = cfg_list[i].get("coils", 2)
+             s_intra = cfg_list[i].get("intra", intra)

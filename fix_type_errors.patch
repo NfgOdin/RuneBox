@@ -1,0 +1,25 @@
+--- main.py
++++ main.py
+@@ -9,7 +9,10 @@
+
+ # Ensure local directory is on python path for frozen execution
+ if getattr(sys, 'frozen', False):
+-    application_path = sys._MEIPASS
++    try:
++        application_path = sys._MEIPASS  # type: ignore
++    except AttributeError:
++        application_path = os.path.dirname(os.path.abspath(__file__))
+ else:
+     application_path = os.path.dirname(os.path.abspath(__file__))
+
+--- gui.py
++++ gui.py
+@@ -25,7 +25,7 @@
+     Get absolute path to resource, works for dev and for PyInstaller _MEIPASS.
+     """
+     try:
+-        base_path = sys._MEIPASS
++        base_path = sys._MEIPASS  # type: ignore
+     except Exception:
+         base_path = os.path.abspath(".")
+     return os.path.join(base_path, relative_path)

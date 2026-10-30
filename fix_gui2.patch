@@ -1,0 +1,11 @@
+--- gui.py
++++ gui.py
+@@ -2206,7 +2206,7 @@
+                 # In DVC parallel, both coils are tied: C1(+) is the left (+) feed and C2(-) is the right (-) tap
+                 driver_entry_terms.append((c1_pos, c2_neg))
+
+-            elif s_coils == 2 and s_intra == "series":
++            elif s_coils == 2 and s_intra == "series" and c2_pos is not None and c2_neg is not None:
+                 # DVC SERIES:
+                 # Coil 1 (-) jumpers to Coil 2 (+) across the voice-coil former / cone.
+                 # Staying inside the driver face eliminates all collisions with bottom return rails or outer jumpers.
