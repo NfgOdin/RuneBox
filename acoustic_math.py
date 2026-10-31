@@ -250,6 +250,55 @@ def calculate_helmholtz_port_length(
     return max(0.25, round(l_physical, 2))
 
 
+def calculate_helmholtz_resonance_frequency(
+    vb_cuft: float,
+    port_physical_length_in: float,
+    port_area_sq_in: float,
+    port_type: str = 'slot',
+    shared_walls: int = 3
+) -> float:
+    """
+    Computes the actual acoustic tuning frequency (Fb) of a given enclosure and port geometry.
+
+    Acoustic Principle:
+    This is the inverse of the Helmholtz port length equation. By determining the physical port
+    volume and adding the end correction factor (k), we derive the total acoustic length.
+    Using the Helmholtz formula for resonance, Fb = (c / 2pi) * sqrt(S / (L_acoustic * V)).
+
+    Returns:
+        The calculated tuning frequency (Fb) in Hz. Returns 0.0 for invalid inputs.
+    """
+    if vb_cuft <= 0 or port_physical_length_in <= 0 or port_area_sq_in <= 0:
+        return 0.0
+
+    vb_cu_in = vb_cuft * 1728.0
+    c = SPEED_OF_SOUND_INCHES_PER_SEC
+    r_eff = math.sqrt(port_area_sq_in / math.pi)
+
+    p_type = port_type.lower()
+    if 'flare' in p_type or 'aero' in p_type:
+        k = 0.614
+    elif 'round' in p_type or 'pipe' in p_type or 'pvc' in p_type:
+        k = 0.732
+    else:
+        if shared_walls <= 0:
+            k = 0.732
+        elif shared_walls == 1:
+            k = 1.15
+        elif shared_walls == 2:
+            k = 1.45
+        else:
+            k = 2.227
+
+    l_acoustic = port_physical_length_in + (k * r_eff)
+    val = port_area_sq_in / (l_acoustic * vb_cu_in)
+
+    if val <= 0:
+        return 0.0
+
+    fb_hz = (c / (2.0 * math.pi)) * math.sqrt(val)
+    return round(fb_hz, 1)
+
 def calculate_port_air_velocity(
     p_rms: float,
     sd_sq_in: float,
