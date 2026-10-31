@@ -5,7 +5,9 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    calculate_helmholtz_port_length,
+    calculate_helmholtz_resonance_frequency
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -87,5 +89,23 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
 
+
+    def test_calculate_helmholtz_resonance_frequency(self):
+        # Round trip test: vb=2.0, fb=35, area=30 -> length ~ 25.85
+        length = calculate_helmholtz_port_length(2.0, 35.0, 30.0, port_type='slot', shared_walls=3)
+        fb_calc = calculate_helmholtz_resonance_frequency(2.0, length, 30.0, port_type='slot', shared_walls=3)
+        self.assertAlmostEqual(fb_calc, 35.0, places=1)
+
+        # Test aero port round trip
+        length_aero = calculate_helmholtz_port_length(2.0, 35.0, 30.0, port_type='aero')
+        fb_aero = calculate_helmholtz_resonance_frequency(2.0, length_aero, 30.0, port_type='aero')
+        self.assertAlmostEqual(fb_aero, 35.0, places=1)
+
+        # Test invalid inputs
+        self.assertEqual(calculate_helmholtz_resonance_frequency(0.0, 20.0, 30.0), 0.0)
+        self.assertEqual(calculate_helmholtz_resonance_frequency(2.0, -1.0, 30.0), 0.0)
+        self.assertEqual(calculate_helmholtz_resonance_frequency(2.0, 20.0, 0.0), 0.0)
+
 if __name__ == '__main__':
+
     unittest.main()
