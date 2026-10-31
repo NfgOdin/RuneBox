@@ -28,7 +28,7 @@ def get_asset_path(relative_path: str) -> str:
     Get absolute path to resource, works for dev and for PyInstaller _MEIPASS.
     """
     try:
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
@@ -2130,7 +2130,7 @@ class RuneBoxApp(ctk.CTk):
         sub_r = min(48.0, (sub_slot_w - 28) / 2.0)
         sub_y = ch / 2
 
-        speaker_terminals = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
+        speaker_terminals: List[Any] = []  # [((c1_p), (c1_n), (c2_p), (c2_n)), ...]
 
         for i in range(n_subs):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
@@ -2167,24 +2167,27 @@ class RuneBoxApp(ctk.CTk):
                 c2_ny = sub_y + 14
 
                 c.create_rectangle(c2_px - 2, c2_py - 5, c2_px + 7, c2_py + 5, fill="#D50000", outline="#FF5252")
-                c.create_text(c2_px + 3, c2_py, text="+", fill="#FFFFFF", font=("Segoe UI", 8, "bold"))
+                c.create_text(c2_px + 3.0, c2_py, text="+", fill="#FFFFFF", font=("Segoe UI", 8, "bold"))
 
                 c.create_rectangle(c2_nx - 2, c2_ny - 5, c2_nx + 7, c2_ny + 5, fill="#212121", outline="#90A4AE")
-                c.create_text(c2_nx + 3, c2_ny, text="-", fill="#FFFFFF", font=("Segoe UI", 8, "bold"))
+                c.create_text(c2_nx + 3.0, c2_ny, text="-", fill="#FFFFFF", font=("Segoe UI", 8, "bold"))
 
                 c.create_text(c2_px + 14, sub_y, text=f"C2\n{s_ohms:.0f}Ω", fill="#80D8FF", font=("Segoe UI", 7), justify="center")
-                speaker_terminals.append(((c1_px, c1_py), (c1_nx, c1_ny), (c2_px, c2_py), (c2_nx, c2_ny)))
+                speaker_terminals.append(((float(c1_px), float(c1_py)), (float(c1_nx), float(c1_ny)), (float(c2_px), float(c2_py)), (float(c2_nx), float(c2_ny))))  # type: ignore
             else:
-                speaker_terminals.append(((c1_px, c1_py), (c1_nx, c1_ny), None, None))
+                speaker_terminals.append(((float(c1_px), float(c1_py)), (float(c1_nx), float(c1_ny)), None, None))  # type: ignore
 
         # -------------------------------------------------------------
         # 3. INTRA-SPEAKER COIL WIRING (DVC Parallel or Series Jumpers)
         # -------------------------------------------------------------
-        driver_entry_terms = []  # [(pos_pt, neg_pt), ...] for each sub
+        driver_entry_terms: List[Any] = []  # [(pos_pt, neg_pt), ...] for each sub
 
         for i, terms in enumerate(speaker_terminals):
             sub_cx = start_subs_x + (sub_slot_w * i) + (sub_slot_w / 2.0)
-            c1_pos, c1_neg, c2_pos, c2_neg = terms
+            c1_pos = terms[0]
+            c1_neg = terms[1]
+            c2_pos = terms[2] if terms[2] else (0.0, 0.0)
+            c2_neg = terms[3] if terms[3] else (0.0, 0.0)
             s_coils = cfg_list[i].get("coils", 2)
             s_intra = cfg_list[i].get("intra", intra)
 
@@ -2196,13 +2199,13 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([c1_pos[0], c1_pos[1], c2_pos[0], c2_pos[1]], fill_color="#FF1744", width=3)
                 draw_junction_dot(c1_pos[0], c1_pos[1], "#FF5252")
                 draw_junction_dot(c2_pos[0], c2_pos[1], "#FF5252")
-                c.create_text(sub_cx, c1_pos[1] - 8, text="COIL PARALLEL (+)", fill="#FF8A80", font=("Segoe UI", 7, "bold"))
+                c.create_text(sub_cx, float(c1_pos[1]) - 8, text="COIL PARALLEL (+)", fill="#FF8A80", font=("Segoe UI", 7, "bold"))
 
                 # Coil 1 (-) to Coil 2 (-) runs horizontally across the lower cone face directly between (-) terminals
                 draw_wire([c1_neg[0], c1_neg[1], c2_neg[0], c2_neg[1]], fill_color="#37474F", width=3)
                 draw_junction_dot(c1_neg[0], c1_neg[1], "#90A4AE")
                 draw_junction_dot(c2_neg[0], c2_neg[1], "#90A4AE")
-                c.create_text(sub_cx, c1_neg[1] + 8, text="COIL PARALLEL (-)", fill="#B0BEC5", font=("Segoe UI", 7, "bold"))
+                c.create_text(sub_cx, float(c1_neg[1]) + 8, text="COIL PARALLEL (-)", fill="#B0BEC5", font=("Segoe UI", 7, "bold"))
 
                 # In DVC parallel, both coils are tied: C1(+) is the left (+) feed and C2(-) is the right (-) tap
                 driver_entry_terms.append((c1_pos, c2_neg))
@@ -2283,8 +2286,8 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(a_neg[0], a_neg[1], "#78909C")
                 draw_junction_dot(d_neg[0], d_neg[1], "#90A4AE")
 
-                c.create_text(d_pos[0], w_top_y - 8, text=f"{p_lbl} (+)", fill="#FF5252", font=("Segoe UI", 7, "bold"))
-                c.create_text(d_neg[0], w_bot_y + 8, text=f"{p_lbl} (-)", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
+                c.create_text(d_pos[0], w_top_y - 8, text=f"{p_lbl} (+)", fill="#FF5252", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
+                c.create_text(d_neg[0], w_bot_y + 8, text=f"{p_lbl} (-)", fill="#90A4AE", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
 
         # Case B: Single Combined Subwoofer Channel (Monoblock or Bridged Mono)
         else:
@@ -2380,7 +2383,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x, s1_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x, s2_pos[1], "#FFAB40")
                 draw_junction_dot(s2_pos[0], s2_pos[1], "#FFAB40")
-                c.create_text(mid_x, (s1_neg[1] + s2_pos[1]) / 2.0 - 12, text="SERIES JUMPER (1→2)", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x, (s1_neg[1] + s2_pos[1]) / 2.0 - 12, text="SERIES JUMPER (1→2)", fill="#FF9100", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
 
             elif inter == "parallel_series" and n_subs == 3:
                 # -------------------------------------------------------------
@@ -2479,7 +2482,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x1, p1_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x1, p1_pos[1], "#FFAB40")
                 draw_junction_dot(p1_pos[0], p1_pos[1], "#FFAB40")
-                c.create_text(mid_x1, (p1_neg[1] + p1_pos[1]) / 2.0 - 12, text="PAIR 1 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x1, (p1_neg[1] + p1_pos[1]) / 2.0 - 12, text="PAIR 1 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
 
                 # Series Jumper for Pair 2 (Sub 3 (-) -> Sub 4 (+))
                 # Routed strictly in the clearance gap between Sub 3 and Sub 4
@@ -2491,7 +2494,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_junction_dot(mid_x2, p2_neg[1], "#FFAB40")
                 draw_junction_dot(mid_x2, p2_pos[1], "#FFAB40")
                 draw_junction_dot(p2_pos[0], p2_pos[1], "#FFAB40")
-                c.create_text(mid_x2, (p2_neg[1] + p2_pos[1]) / 2.0 - 12, text="PAIR 2 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                c.create_text(mid_x2, (p2_neg[1] + p2_pos[1]) / 2.0 - 12, text="PAIR 2 JUMPER", fill="#FF9100", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
 
             elif inter == "parallel_series" and n_subs == 4:
                 # -------------------------------------------------------------
@@ -2572,7 +2575,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([a_pos[0], a_pos[1], a_pos[0] + 20, a_pos[1], a_pos[0] + 20, w_top_y, s1_pos[0], w_top_y, s1_pos[0], s1_pos[1]], fill_color="#FF1744", width=3)
                 draw_junction_dot(a_pos[0], a_pos[1], "#FF1744")
                 draw_junction_dot(s1_pos[0], s1_pos[1], "#FF5252")
-                c.create_text((a_pos[0] + s1_pos[0]) / 2, w_top_y - 8, text=f"{p_lbl} (+) TO SUB 1", fill="#FF5252", font=("Segoe UI", 7, "bold"))
+                c.create_text(float((a_pos[0] + s1_pos[0]) / 2), float(w_top_y - 8), text=f"{p_lbl} (+) TO SUB 1", fill="#FF5252", font=("Segoe UI", 7, "bold"))
 
                 # Inter-speaker series jumpers:
                 # Each jumper routes strictly through the open clearance gap between Sub i and Sub i+1.
@@ -2592,7 +2595,7 @@ class RuneBoxApp(ctk.CTk):
                     draw_junction_dot(mid_x, cur_neg[1], "#FFAB40")
                     draw_junction_dot(mid_x, next_pos[1], "#FFAB40")
                     draw_junction_dot(next_pos[0], next_pos[1], "#FFAB40")
-                    c.create_text(mid_x, (cur_neg[1] + next_pos[1]) / 2.0 - 12, text=f"JUMPER {i+1}→{i+2}", fill="#FF9100", font=("Segoe UI", 7, "bold"))
+                    c.create_text(mid_x, (cur_neg[1] + next_pos[1]) / 2.0 - 12, text=f"JUMPER {i+1}→{i+2}", fill="#FF9100", font=("Segoe UI", 7, "bold"))  # type: ignore[arg-type]
 
                 # Final sub (-) returns to amp (-)
                 sn_neg = driver_entry_terms[-1][1]
@@ -2600,7 +2603,7 @@ class RuneBoxApp(ctk.CTk):
                 draw_wire([sn_neg[0], sn_neg[1], sn_neg[0], w_bot_y, a_neg[0] + 20, w_bot_y, a_neg[0] + 20, a_neg[1], a_neg[0], a_neg[1]], fill_color="#455A64", width=3)
                 draw_junction_dot(sn_neg[0], sn_neg[1], "#90A4AE")
                 draw_junction_dot(a_neg[0], a_neg[1], "#78909C")
-                c.create_text((a_neg[0] + sn_neg[0]) / 2, w_bot_y + 8, text=f"{p_lbl} (-) RETURN FROM LAST SUB", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
+                c.create_text(float((a_neg[0] + sn_neg[0]) / 2), float(w_bot_y + 8), text=f"{p_lbl} (-) RETURN FROM LAST SUB", fill="#90A4AE", font=("Segoe UI", 7, "bold"))
 
     def _on_save_custom_subwoofer_clicked(self):
         # Dialog to prompt for Model Name
