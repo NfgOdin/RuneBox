@@ -87,5 +87,99 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
 
+
+    def test_calculate_helmholtz_port_length(self):
+        """
+        Tests the calculation of Helmholtz port length.
+        Acoustic Principle:
+        The physical length of a port (L_physical) is derived from the acoustic length (L_acoustic)
+        minus an end correction factor. L_acoustic depends on the speed of sound, port area,
+        box volume, and tuning frequency.
+        """
+        from acoustic_math import calculate_helmholtz_port_length
+
+        # Normal usage, 2.0 cuft, 35 Hz, 20 sq in area, slot port with 3 shared walls
+        length = calculate_helmholtz_port_length(
+            vb_cuft=2.0,
+            fb_hz=35.0,
+            port_area_sq_in=20.0,
+            port_type='slot',
+            shared_walls=3
+        )
+        # Expected manual check:
+        # vb_cu_in = 2.0 * 1728 = 3456
+        # c = 13504
+        # L_ac = (13504^2 * 20) / (4 * pi^2 * 35^2 * 3456) = (3647160320) / (167123999.6) ≈ 21.82
+        # r_eff = sqrt(20 / pi) ≈ 2.523
+        # k = 2.227 (slot, 3 shared walls)
+        # L_phys = 21.82 - (2.227 * 2.523) = 21.82 - 5.62 = 16.2
+        self.assertAlmostEqual(length, 16.2, places=1)
+
+        # Flare / aero port
+        length_aero = calculate_helmholtz_port_length(
+            vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='aero', shared_walls=0
+        )
+        self.assertAlmostEqual(length_aero, 20.27, places=1)
+
+        # Round port
+        length_round = calculate_helmholtz_port_length(
+            vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='round', shared_walls=0
+        )
+        self.assertAlmostEqual(length_round, 19.97, places=1)
+
+        # Shared walls edge cases (slot)
+        length_sw0 = calculate_helmholtz_port_length(2.0, 35.0, 20.0, 'slot', 0)
+        self.assertAlmostEqual(length_sw0, 19.97, places=1)
+
+        length_sw1 = calculate_helmholtz_port_length(2.0, 35.0, 20.0, 'slot', 1)
+        self.assertAlmostEqual(length_sw1, 18.9, places=1)
+
+        length_sw2 = calculate_helmholtz_port_length(2.0, 35.0, 20.0, 'slot', 2)
+        self.assertAlmostEqual(length_sw2, 18.16, places=1)
+
+        # Zero or negative inputs
+        self.assertEqual(calculate_helmholtz_port_length(0.0, 35.0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_port_length(2.0, 0.0, 20.0), 0.0)
+        self.assertEqual(calculate_helmholtz_port_length(2.0, 35.0, -5.0), 0.0)
+
+
+    def test_calculate_port_air_velocity(self):
+        """
+        Tests calculation of port air velocity.
+        Acoustic Principle:
+        Velocity relies on cone area (Sd) multiplied by excursion (Xmax) driven at a given frequency,
+        forced through the port area. Mach number > 0.05 (~17 m/s) often introduces audible chuffing.
+        """
+        from acoustic_math import calculate_port_air_velocity
+
+        # Laminar (Clean)
+        res_laminar = calculate_port_air_velocity(
+            p_rms=1000.0, sd_sq_in=75.0, xmax_mm=10.0, fb_hz=35.0, port_area_sq_in=40.0
+        )
+        self.assertTrue(res_laminar['velocity_mps'] < 17.0)
+        self.assertEqual(res_laminar['status'], 'LAMINAR (Clean - Inaudible Turbulence)')
+        self.assertFalse(res_laminar['is_warning'])
+
+        # Moderate
+        res_mod = calculate_port_air_velocity(
+            p_rms=1000.0, sd_sq_in=75.0, xmax_mm=30.0, fb_hz=35.0, port_area_sq_in=35.0
+        )
+        self.assertTrue(17.0 <= res_mod['velocity_mps'] <= 25.0)
+        self.assertEqual(res_mod['status'], 'MODERATE (Slight compression risk at max excursion)')
+        self.assertFalse(res_mod['is_warning'])
+
+        # Chuffing Alert
+        res_chuff = calculate_port_air_velocity(
+            p_rms=1000.0, sd_sq_in=100.0, xmax_mm=40.0, fb_hz=35.0, port_area_sq_in=20.0
+        )
+        self.assertTrue(res_chuff['velocity_mps'] > 25.0)
+        self.assertTrue('CHUFFING ALERT' in res_chuff['status'])
+        self.assertTrue(res_chuff['is_warning'])
+
+        # Zero or negative inputs
+        res_invalid = calculate_port_air_velocity(1000.0, 0.0, 10.0, 35.0, 20.0)
+        self.assertEqual(res_invalid['velocity_mps'], 0.0)
+        self.assertEqual(res_invalid['status'], 'Invalid Inputs')
+
 if __name__ == '__main__':
     unittest.main()
