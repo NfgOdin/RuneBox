@@ -296,3 +296,69 @@ def calculate_port_air_velocity(
         'badge_color': badge_color,
         'is_warning': is_warning
     }
+
+
+def calculate_port_pipe_resonance(port_length_in: float) -> float:
+    """
+    Calculates the primary longitudinal pipe resonance frequency (organ pipe resonance) of a port.
+
+    Acoustic Principle:
+    A port duct acts as an open-ended organ pipe. It exhibits standing wave resonances
+    at frequencies where the length of the port matches a half-wavelength (or multiples).
+    If this resonance falls within or near the subwoofer's operating passband (e.g., < 150Hz),
+    it can cause audible midrange coloration, peaks, and distortion (often referred to as 'port noise'
+    or 'pipe resonance').
+
+    Formula:
+    f_res = c / (2 * L)
+    where:
+    - c is the speed of sound (13504 inches/second)
+    - L is the physical length of the port in inches
+    """
+    if port_length_in <= 0.0:
+        return 0.0
+
+    f_res = SPEED_OF_SOUND_INCHES_PER_SEC / (2.0 * port_length_in)
+    return round(f_res, 1)
+
+
+def calculate_enclosure_standing_waves(
+    internal_width_in: float,
+    internal_height_in: float,
+    internal_depth_in: float
+) -> Dict[str, float]:
+    """
+    Calculates the first-order axial standing wave (modal) frequencies for the
+    internal dimensions of the enclosure.
+
+    Acoustic Principle:
+    Sound waves reflect between parallel internal walls. When the distance between two
+    walls equals half a wavelength of a given frequency, a strong standing wave (mode)
+    forms. This causes peaks and nulls in the internal acoustic field. If these resonances
+    fall within the subwoofer's passband, internal dampening (polyfill/fiberglass) or
+    geometric alterations (wedges) are required to mitigate coloration.
+
+    Formula:
+    f_mode = c / (2 * D)
+    where:
+    - c is the speed of sound (13504 inches/second)
+    - D is the internal distance in inches
+    """
+    modes = {}
+
+    if internal_width_in > 0.0:
+        modes['width_mode_hz'] = round(SPEED_OF_SOUND_INCHES_PER_SEC / (2.0 * internal_width_in), 1)
+    else:
+        modes['width_mode_hz'] = 0.0
+
+    if internal_height_in > 0.0:
+        modes['height_mode_hz'] = round(SPEED_OF_SOUND_INCHES_PER_SEC / (2.0 * internal_height_in), 1)
+    else:
+        modes['height_mode_hz'] = 0.0
+
+    if internal_depth_in > 0.0:
+        modes['depth_mode_hz'] = round(SPEED_OF_SOUND_INCHES_PER_SEC / (2.0 * internal_depth_in), 1)
+    else:
+        modes['depth_mode_hz'] = 0.0
+
+    return modes

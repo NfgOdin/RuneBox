@@ -5,7 +5,9 @@ from acoustic_math import (
     solve_sealed_alignment,
     solve_ported_optimal_keele,
     solve_4th_order_bandpass,
-    solve_6th_order_bandpass_series_and_parallel
+    solve_6th_order_bandpass_series_and_parallel,
+    calculate_port_pipe_resonance,
+    calculate_enclosure_standing_waves
 )
 
 class TestAcousticMath(unittest.TestCase):
@@ -86,6 +88,33 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(ebp, 100.0)
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
+
+    def test_calculate_port_pipe_resonance(self):
+        # c = 13504 in/s
+        # 10" port -> 13504 / (2 * 10) = 675.2 Hz
+        self.assertEqual(calculate_port_pipe_resonance(10.0), 675.2)
+        # 20" port -> 13504 / (2 * 20) = 337.6 Hz
+        self.assertEqual(calculate_port_pipe_resonance(20.0), 337.6)
+
+        # Test invalid inputs
+        self.assertEqual(calculate_port_pipe_resonance(0.0), 0.0)
+        self.assertEqual(calculate_port_pipe_resonance(-5.0), 0.0)
+
+    def test_calculate_enclosure_standing_waves(self):
+        # c = 13504 in/s
+        # width = 16.0 -> 13504 / 32 = 422.0 Hz
+        # height = 12.0 -> 13504 / 24 = 562.7 Hz
+        # depth = 20.0 -> 13504 / 40 = 337.6 Hz
+        modes = calculate_enclosure_standing_waves(16.0, 12.0, 20.0)
+        self.assertEqual(modes['width_mode_hz'], 422.0)
+        self.assertEqual(modes['height_mode_hz'], 562.7)
+        self.assertEqual(modes['depth_mode_hz'], 337.6)
+
+        # Test 0.0 and negative inputs gracefully
+        modes_zero = calculate_enclosure_standing_waves(0.0, 0.0, -10.0)
+        self.assertEqual(modes_zero['width_mode_hz'], 0.0)
+        self.assertEqual(modes_zero['height_mode_hz'], 0.0)
+        self.assertEqual(modes_zero['depth_mode_hz'], 0.0)
 
 if __name__ == '__main__':
     unittest.main()
