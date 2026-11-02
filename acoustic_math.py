@@ -79,6 +79,53 @@ class TSParameters:
         return 0.001
 
     @property
+    def derived_qes(self) -> float:
+        """
+        Auto-derives electrical Q (Qes) if it is missing or 0.0.
+        Acoustic Principle:
+        Electrical damping (Qes) can be derived from the parallel combination formula
+        if Total damping (Qts) and Mechanical damping (Qms) are known.
+        Formula: Qes = (Qts * Qms) / (Qms - Qts).
+        Returns a safe fallback of 0.001 to prevent ZeroDivisionErrors if unable to derive.
+        """
+        if self.qes > 0.0:
+            return self.qes
+        if self.qts > 0.0 and self.qms > 0.0 and self.qms > self.qts:
+            return (self.qts * self.qms) / (self.qms - self.qts)
+        return 0.001
+
+    @property
+    def derived_qms(self) -> float:
+        """
+        Auto-derives mechanical Q (Qms) if it is missing or 0.0.
+        Acoustic Principle:
+        Mechanical damping (Qms) can be derived from the parallel combination formula
+        if Total damping (Qts) and Electrical damping (Qes) are known.
+        Formula: Qms = (Qts * Qes) / (Qes - Qts).
+        Returns a safe fallback of 0.001 to prevent ZeroDivisionErrors if unable to derive.
+        """
+        if self.qms > 0.0:
+            return self.qms
+        if self.qts > 0.0 and self.qes > 0.0 and self.qes > self.qts:
+            return (self.qts * self.qes) / (self.qes - self.qts)
+        return 0.001
+
+    @property
+    def derived_ebp(self) -> float:
+        """
+        Auto-derives Efficiency Bandwidth Product (EBP).
+        Acoustic Principle:
+        EBP is an indicator of a driver's suitability for sealed vs ported enclosures.
+        Formula: EBP = Fs / Qes.
+        Uses the derived_qes to ensure calculation even if qes was missing but derivable.
+        Returns 0.0 if unable to calculate.
+        """
+        qes = self.derived_qes
+        if qes > 0.0 and self.fs > 0.0:
+            return self.fs / qes
+        return 0.0
+
+    @property
     def sensitivity(self) -> Dict[str, float]:
         """
         Derives reference efficiency (n0) and 1W/1m SPL sensitivity.
