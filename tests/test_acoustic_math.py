@@ -87,5 +87,107 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
 
+
+    def test_ts_parameters_isobaric_and_num_drivers(self):
+        """
+        Test effective_vas_liters, effective_sd_sq_in, effective_sd_sq_m
+        for standard, isobaric, and multiple drivers to cover lines 44, 53-60, 64.
+        """
+        # Standard Single Driver
+        ts_std = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0, num_drivers=1, is_isobaric=False, sd_sq_cm=500.0)
+        self.assertAlmostEqual(ts_std.effective_vas_liters, 50.0)
+        self.assertAlmostEqual(ts_std.effective_sd_sq_in, 77.5, places=1) # 500 * 0.155
+        self.assertAlmostEqual(ts_std.effective_sd_sq_m, 0.05, places=2)
+
+        # Isobaric Pair (Vas is halved, Sd is that of one driver)
+        ts_iso = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0, num_drivers=2, is_isobaric=True, sd_sq_cm=500.0)
+        self.assertAlmostEqual(ts_iso.effective_vas_liters, 50.0)
+        self.assertAlmostEqual(ts_iso.effective_sd_sq_in, 77.5, places=1)
+
+        ts_no_sd = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0, sd_sq_cm=0.0, nominal_dia_inch=12.0)
+        self.assertTrue(ts_no_sd.effective_sd_sq_in > 0)
+
+        # Non-Isobaric Multi-Driver (Vas multiplied, Sd multiplied)
+        ts_multi = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0, num_drivers=2, is_isobaric=False, nominal_dia_inch=12.0)
+        self.assertAlmostEqual(ts_multi.effective_vas_liters, 100.0)
+        # Without sd_sq_cm, it calculates from nominal_dia_inch
+        # r_eff = (12 * 0.5) * 0.82 = 4.92
+        # sd_in2 = pi * (4.92^2) = ~76.046
+        # multiplied by 2 = 152.09
+        self.assertAlmostEqual(ts_multi.effective_sd_sq_in, 152.09, places=2)
+
+    def test_ratio_bounds(self):
+        """
+        Test that solvers handle target_qtc or qtc_rear constraints correctly
+        when the ratio of target to derived_qts is <= 1.0 (lines 124, 171).
+        """
+        ts_high_q = TSParameters(fs=40.0, qts=0.8, qes=0.9, qms=7.0, vas_liters=40.0, xmax_mm=10.0, p_rms=300.0)
+
+        # sealed: target_qtc (default 0.707) / 0.8 is < 1.0, forces ratio = 1.001
+        sealed = solve_sealed_alignment(ts_high_q)
+        self.assertEqual(sealed['target_qtc'], 0.707)
+        self.assertTrue('net_vb_cuft' in sealed)
+
+        # 4th order: qtc_rear (0.707) / 0.8 < 1.0, forces ratio = 1.001
+        bp4 = solve_4th_order_bandpass(ts_high_q)
+        self.assertTrue('rear_sealed_vb_cuft' in bp4)
+
+    def test_calculate_helmholtz_port_length(self):
+        """
+        Test calculate_helmholtz_port_length for invalid inputs, different port types,
+        and shared walls edge cases to hit coverage lines 226-250.
+        """
+        from acoustic_math import calculate_helmholtz_port_length
+
+        # Invalid inputs
+        self.assertEqual(calculate_helmholtz_port_length(vb_cuft=0, fb_hz=35, port_area_sq_in=10), 0.0)
+        self.assertEqual(calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=-5, port_area_sq_in=10), 0.0)
+
+        # Valid: Flare/Aero
+        len_aero = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='aero')
+        self.assertTrue(len_aero > 0.25)
+
+        # Valid: Round/Pipe
+        len_round = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='round pvc')
+        self.assertTrue(len_round > 0.25)
+
+        # Valid: Slot with different shared walls
+        len_slot_0 = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='slot', shared_walls=0)
+        len_slot_1 = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='slot', shared_walls=1)
+        len_slot_2 = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='slot', shared_walls=2)
+        len_slot_3 = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='slot', shared_walls=3)
+        len_slot_4 = calculate_helmholtz_port_length(vb_cuft=2.0, fb_hz=35.0, port_area_sq_in=20.0, port_type='slot', shared_walls=4)
+
+        self.assertTrue(len_slot_0 > 0.25)
+        self.assertTrue(len_slot_1 > 0.25)
+        self.assertTrue(len_slot_2 > 0.25)
+        self.assertTrue(len_slot_3 > 0.25)
+        self.assertTrue(len_slot_4 > 0.25)
+
+    def test_calculate_port_air_velocity(self):
+        """
+        Test calculate_port_air_velocity invalid bounds and mach number checks
+        for Laminar, Moderate, and Chuffing to hit coverage lines 260-291.
+        """
+        from acoustic_math import calculate_port_air_velocity
+
+        # Invalid Inputs
+        invalid = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=0, xmax_mm=10.0, fb_hz=35.0, port_area_sq_in=10.0)
+        self.assertEqual(invalid['velocity_mps'], 0.0)
+        self.assertEqual(invalid['status'], 'Invalid Inputs')
+
+        # Laminar (very large port area relative to driver/xmax)
+        laminar = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=50.0, xmax_mm=5.0, fb_hz=35.0, port_area_sq_in=100.0)
+        self.assertTrue('LAMINAR' in laminar['status'])
+
+        # Moderate (medium port area)
+        moderate = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=80.0, xmax_mm=15.0, fb_hz=35.0, port_area_sq_in=18.0)
+        self.assertTrue('MODERATE' in moderate['status'])
+
+        # Chuffing (tiny port area, high excursion)
+        chuffing = calculate_port_air_velocity(p_rms=500.0, sd_sq_in=150.0, xmax_mm=30.0, fb_hz=30.0, port_area_sq_in=2.0)
+        self.assertTrue('CHUFFING ALERT' in chuffing['status'])
+        self.assertTrue(chuffing['is_warning'])
+
 if __name__ == '__main__':
     unittest.main()
