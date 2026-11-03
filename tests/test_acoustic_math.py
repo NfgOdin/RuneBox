@@ -87,5 +87,44 @@ class TestAcousticMath(unittest.TestCase):
         self.assertEqual(badge, 'Ported / Bandpass')
         self.assertTrue('>= 85' in detail)
 
+
+    def test_derived_qes(self):
+        # Qes is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qes, 0.5)
+
+        # Qes is 0.0, but Qts and Qms are given
+        # Qes = (0.4 * 4.0) / (4.0 - 0.4) = 1.6 / 3.6 = 0.4444...
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qes, 0.4444, places=3)
+
+        # Qes is 0.0, and Qts/Qms are 0.0 (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qes, 0.001)
+
+    def test_derived_qms(self):
+        # Qms is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qms, 4.0)
+
+        # Qms is 0.0, but Qts and Qes are given
+        # Qms = (0.5 * 0.4) / (0.5 - 0.4) = 0.2 / 0.1 = 2.0
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qms, 2.0, places=3)
+
+        # Qms is 0.0, and Qts/Qes are 0.0 (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qms, 0.001)
+
+    def test_derived_ebp(self):
+        # Using explicit qes
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_ebp, 60.0)
+
+        # Using derived qes = 0.4444...
+        # fs = 30.0. EBP = 30.0 / (1.6/3.6) = 30.0 * 3.6 / 1.6 = 67.5
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_ebp, 67.5, places=1)
+
 if __name__ == '__main__':
     unittest.main()
