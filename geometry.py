@@ -69,6 +69,17 @@ class EnclosureGeometry:
     is_inverted_sub: bool = False
 
     @property
+    def effective_sub_displacement_cuft(self) -> float:
+        """
+        Calculates the effective driver displacement accounting for standard vs inverted mounting.
+        Physical Principle: Inverted ('ass-out') subwoofers place the motor outside the enclosure,
+        meaning their basket and motor do not consume internal gross volume.
+        """
+        if self.is_inverted_sub:
+            return 0.0
+        return self.sub_displacement_cuft * self.num_subwoofers
+
+    @property
     def seat_recline_angle_deg(self) -> float:
         """
         Calculate the front/back baffle recline angle in degrees for wedge boxes.
@@ -157,7 +168,7 @@ class EnclosureGeometry:
         When mounted inverted ('ass-out'), subwoofer motor is outside the box, adding the cone volume (sub_disp is 0.0 or added).
         """
         gross = self.calculate_internal_gross_volume_cuft()
-        sub_disp = 0.0 if self.is_inverted_sub else (self.sub_displacement_cuft * self.num_subwoofers)
+        sub_disp = self.effective_sub_displacement_cuft
         port_disp = self.calculate_port_displacement_cuft()
         divider_disp = self.calculate_divider_displacement_cuft()
         net = gross - sub_disp - port_disp - self.bracing_displacement_cuft - divider_disp
@@ -180,7 +191,7 @@ class EnclosureGeometry:
             self.ext_width = locked_width_in
 
         # Target gross needed = Net target + sub_disp + port_disp + bracing + divider_disp
-        sub_disp = self.sub_displacement_cuft * self.num_subwoofers
+        sub_disp = self.effective_sub_displacement_cuft
         port_disp = self.calculate_port_displacement_cuft()
         divider_disp = self.calculate_divider_displacement_cuft()
         target_gross_cuft = target_net_cuft + sub_disp + port_disp + self.bracing_displacement_cuft + divider_disp
@@ -505,7 +516,7 @@ class EnclosureGeometry:
         int_gross = self.calculate_internal_gross_volume_cuft()
         net_vb = self.calculate_net_internal_volume_cuft()
         port_disp = self.calculate_port_displacement_cuft()
-        sub_disp = self.sub_displacement_cuft * self.num_subwoofers
+        sub_disp = self.effective_sub_displacement_cuft
         divider_disp = self.calculate_divider_displacement_cuft()
 
         lines = [
