@@ -39,10 +39,9 @@ class TSParameters:
 
     @property
     def effective_vas_liters(self) -> float:
-        base_vas = self.vas_liters
         if self.is_isobaric:
-            base_vas *= 0.5
-        return base_vas * self.num_drivers
+            return (self.vas_liters * 0.5) * (self.num_drivers / 2.0)
+        return self.vas_liters * self.num_drivers
 
     @property
     def effective_vas_cuft(self) -> float:
