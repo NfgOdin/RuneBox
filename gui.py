@@ -1387,7 +1387,7 @@ class RuneBoxApp(ctk.CTk):
             )
 
             # EBP calculation
-            ebp, badge_name, ebp_detail = am.calculate_ebp(fs, qes)
+            ebp, badge_name, ebp_detail = am.calculate_ebp(fs, self.ts_params.derived_qes)
             self.ebp_badge.configure(text=f"EBP: {ebp} ({badge_name})")
             self.ebp_details_lbl.configure(
                 text=f"• {ebp_detail}\n"

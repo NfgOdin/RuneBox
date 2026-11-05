@@ -64,6 +64,38 @@ class TSParameters:
         return self.effective_sd_sq_in * 0.00064516
 
     @property
+    def derived_qes(self) -> float:
+        """
+        Auto-derives electrical Q (Qes) if it is missing or 0.0.
+        Acoustic Principle:
+        Electrical damping (Qes) represents the control the motor/magnet exerts on the suspension.
+        It can be derived from Total Q (Qts) and Mechanical Q (Qms).
+        Formula: Qes = (Qts * Qms) / (Qms - Qts).
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qes > 0.0:
+            return self.qes
+        if self.qts > 0.0 and self.qms > 0.0 and self.qms > self.qts:
+            return (self.qts * self.qms) / (self.qms - self.qts)
+        return 0.001
+
+    @property
+    def derived_qms(self) -> float:
+        """
+        Auto-derives mechanical Q (Qms) if it is missing or 0.0.
+        Acoustic Principle:
+        Mechanical damping (Qms) represents the losses in the suspension (spider/surround).
+        It can be derived from Total Q (Qts) and Electrical Q (Qes).
+        Formula: Qms = (Qts * Qes) / (Qes - Qts).
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qms > 0.0:
+            return self.qms
+        if self.qts > 0.0 and self.qes > 0.0 and self.qes > self.qts:
+            return (self.qts * self.qes) / (self.qes - self.qts)
+        return 0.001
+
+    @property
     def derived_qts(self) -> float:
         """
         Auto-derives total Q (Qts) if it is missing or 0.0.
@@ -74,8 +106,15 @@ class TSParameters:
         """
         if self.qts > 0.0:
             return self.qts
-        if self.qes > 0.0 and self.qms > 0.0:
-            return (self.qes * self.qms) / (self.qes + self.qms)
+
+        # We only want to use derived properties if the primary variables exist, to avoid
+        # combining the two 0.001 fallbacks into a 0.0005 result
+        if self.qes > 0.0 or self.qms > 0.0:
+            eff_qes = self.derived_qes
+            eff_qms = self.derived_qms
+            if eff_qes > 0.0 and eff_qms > 0.0:
+                return (eff_qes * eff_qms) / (eff_qes + eff_qms)
+
         return 0.001
 
     @property
@@ -88,7 +127,7 @@ class TSParameters:
         SPL at 1W/1m is calculated via standard logarithmic conversion:
         SPL_1W_1m = 112.2 + 10 * log10(n0).
         """
-        qes_safe = max(self.qes, 0.001)
+        qes_safe = max(self.derived_qes, 0.001)
         n0_pct = (9.64 * (10 ** -10) * (self.fs ** 3) * self.vas_liters) / qes_safe * 100.0
         n0 = max(n0_pct / 100.0, 1e-12)
         spl_1w_1m = 112.2 + 10.0 * math.log10(n0)
