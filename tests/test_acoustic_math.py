@@ -24,6 +24,45 @@ class TestAcousticMath(unittest.TestCase):
         ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
         self.assertEqual(ts3.derived_qts, 0.001)
 
+
+    def test_derived_qes(self):
+        # Qes is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qes, 0.5)
+
+        # Qes is 0.0, but Qts and Qms are given (Qms > Qts)
+        # Qes = (0.4 * 4.0) / (4.0 - 0.4) = 1.6 / 3.6 = 0.4444...
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qes, 0.4444, places=3)
+
+        # Qes is 0.0, and others missing/invalid (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qes, 0.001)
+
+    def test_derived_qms(self):
+        # Qms is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qms, 4.0)
+
+        # Qms is 0.0, but Qes and Qts are given (Qes > Qts)
+        # Qms = (0.5 * 0.4) / (0.5 - 0.4) = 0.2 / 0.1 = 2.0
+        ts2 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qms, 2.0, places=3)
+
+        # Qms is 0.0, and others missing/invalid (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qms, 0.001)
+
+    def test_derived_ebp(self):
+        # EBP = Fs / Qes = 30 / 0.5 = 60.0
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_ebp, 60.0)
+
+        # Test fallback
+        ts2 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        # derived_qes will be 0.001, so ebp = 30.0 / 0.001 = 30000.0
+        self.assertEqual(ts2.derived_ebp, 30000.0)
+
     def test_sensitivity(self):
         # Based on standard 12-inch sub specs
         ts = TSParameters(fs=33.7, qts=0.44, qes=0.49, qms=4.7, vas_liters=33.4, xmax_mm=19.0, p_rms=750.0)

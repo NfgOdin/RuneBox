@@ -78,6 +78,48 @@ class TSParameters:
             return (self.qes * self.qms) / (self.qes + self.qms)
         return 0.001
 
+
+    @property
+    def derived_qes(self) -> float:
+        """
+        Auto-derives electrical Q (Qes) if it is missing or 0.0.
+        Acoustic Principle:
+        Qes = (Qts * Qms) / (Qms - Qts)
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qes > 0.0:
+            return self.qes
+        if self.qts > 0.0 and self.qms > 0.0 and self.qms > self.qts:
+            return (self.qts * self.qms) / (self.qms - self.qts)
+        return 0.001
+
+    @property
+    def derived_qms(self) -> float:
+        """
+        Auto-derives mechanical Q (Qms) if it is missing or 0.0.
+        Acoustic Principle:
+        Qms = (Qes * Qts) / (Qes - Qts)
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qms > 0.0:
+            return self.qms
+        if self.qes > 0.0 and self.qts > 0.0 and self.qes > self.qts:
+            return (self.qes * self.qts) / (self.qes - self.qts)
+        return 0.001
+
+    @property
+    def derived_ebp(self) -> float:
+        """
+        Auto-derives Efficiency Bandwidth Product (EBP).
+        Acoustic Principle:
+        EBP = Fs / Qes
+        Provides a safe fallback of 0.0 to prevent division by zero.
+        """
+        qes = self.derived_qes
+        if qes <= 0.0:
+            return 0.0
+        return self.fs / qes
+
     @property
     def sensitivity(self) -> Dict[str, float]:
         """
@@ -88,7 +130,7 @@ class TSParameters:
         SPL at 1W/1m is calculated via standard logarithmic conversion:
         SPL_1W_1m = 112.2 + 10 * log10(n0).
         """
-        qes_safe = max(self.qes, 0.001)
+        qes_safe = max(self.derived_qes, 0.001)
         n0_pct = (9.64 * (10 ** -10) * (self.fs ** 3) * self.vas_liters) / qes_safe * 100.0
         n0 = max(n0_pct / 100.0, 1e-12)
         spl_1w_1m = 112.2 + 10.0 * math.log10(n0)
