@@ -24,6 +24,34 @@ class TestAcousticMath(unittest.TestCase):
         ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
         self.assertEqual(ts3.derived_qts, 0.001)
 
+    def test_derived_qes(self):
+        # Qes is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qes, 0.5)
+
+        # Qes is 0.0, but Qts and Qms are given
+        # Qes = (0.444444 * 4.0) / (4.0 - 0.444444) = 1.777777 / 3.555555 = 0.5
+        ts2 = TSParameters(fs=30.0, qts=0.444444, qes=0.0, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qes, 0.5, places=3)
+
+        # Qes is 0.0, and Qts/Qms are 0.0 (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qes, 0.001)
+
+    def test_derived_qms(self):
+        # Qms is given
+        ts1 = TSParameters(fs=30.0, qts=0.4, qes=0.5, qms=4.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts1.derived_qms, 4.0)
+
+        # Qms is 0.0, but Qts and Qes are given
+        # Qms = (0.444444 * 0.5) / (0.5 - 0.444444) = 0.222222 / 0.055555 = 4.0
+        ts2 = TSParameters(fs=30.0, qts=0.444444, qes=0.5, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertAlmostEqual(ts2.derived_qms, 4.0, places=3)
+
+        # Qms is 0.0, and Qts/Qes are 0.0 (fallback)
+        ts3 = TSParameters(fs=30.0, qts=0.0, qes=0.0, qms=0.0, vas_liters=50.0, xmax_mm=10.0, p_rms=500.0)
+        self.assertEqual(ts3.derived_qms, 0.001)
+
     def test_sensitivity(self):
         # Based on standard 12-inch sub specs
         ts = TSParameters(fs=33.7, qts=0.44, qes=0.49, qms=4.7, vas_liters=33.4, xmax_mm=19.0, p_rms=750.0)

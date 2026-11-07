@@ -79,6 +79,38 @@ class TSParameters:
         return 0.001
 
     @property
+    def derived_qes(self) -> float:
+        """
+        Auto-derives electrical damping (Qes) if it is missing or 0.0.
+        Acoustic Principle:
+        Electrical damping (Qes) represents the damping of the driver's suspension
+        from the motor force. Derived by back-solving the parallel combination formula:
+        Qes = (Qts * Qms) / (Qms - Qts).
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qes > 0.0:
+            return self.qes
+        if self.qts > 0.0 and self.qms > 0.0 and self.qms > self.qts:
+            return (self.qts * self.qms) / (self.qms - self.qts)
+        return 0.001
+
+    @property
+    def derived_qms(self) -> float:
+        """
+        Auto-derives mechanical damping (Qms) if it is missing or 0.0.
+        Acoustic Principle:
+        Mechanical damping (Qms) represents the physical damping of the driver's suspension.
+        Derived by back-solving the parallel combination formula:
+        Qms = (Qts * Qes) / (Qes - Qts).
+        Provides a safe fallback of 0.001 to prevent ZeroDivisionErrors in solver loops.
+        """
+        if self.qms > 0.0:
+            return self.qms
+        if self.qts > 0.0 and self.qes > 0.0 and self.qes > self.qts:
+            return (self.qts * self.qes) / (self.qes - self.qts)
+        return 0.001
+
+    @property
     def sensitivity(self) -> Dict[str, float]:
         """
         Derives reference efficiency (n0) and 1W/1m SPL sensitivity.
